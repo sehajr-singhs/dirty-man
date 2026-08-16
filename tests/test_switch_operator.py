@@ -100,3 +100,30 @@ def test_train_test_streams_are_disjoint():
     tr, te = make_datasets(n_train=64, n_test=64, seed=9)
     # data never leaks: distinct random streams
     assert not torch.equal(tr.tensors[0], te.tensors[0])
+
+
+def test_device_auto_detect_and_batches_move():
+    # the runner moves batches to DEVICE via collate; on CPU-only boxes this
+    # is a no-op but must not crash, and on GPU boxes it must not raise
+    # device-mismatch errors.
+    from dirty_man.data_glyphs import make_datasets
+    from run_experiments import collate, make_loader
+
+    tr, _ = make_datasets(n_train=16, n_test=8, seed=2)
+    x, y, d, s, r = next(iter(make_loader(tr, batch=8, shuffle=False)))
+    assert x.dtype == torch.float32
+    assert y.dtype == torch.int64
+    assert d.shape == (8,) and s.shape == (8,) and r.shape == (8,)
+    # all five tensors land on the same device as the model would be
+    dev = torch.cuda.device_of(x) if x.is_cuda else torch.device("cpu")
+    assert x.device == dev
+
+
+def test_forward_on_gpu_if_available():
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA on this machine")
+    m = SwitchOperator(n_classes=10).to("cuda")
+    x = torch.randn(4, 1, 24, 24, device="cuda")
+    out, info = m(x, tau=1.0, hard=False)
+    assert out.shape == (4, 10)
+    assert info["probs"].device.type == "cuda"

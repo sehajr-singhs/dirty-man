@@ -46,9 +46,9 @@ from dirty_man.data_glyphs import make_datasets, save_playground_data
 from dirty_man.switch_operator import (IMG, PRIMITIVES, Standalone, SwitchOperator,
                                        annealed_tau, set_seed)
 
-DEVICE = "cpu"
-# This box thrashes on tiny CPU ops with many torch threads; single-thread
-# gives 6-35x speedups for the small networks here.
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+# On CPU boxes, torch thrashes on tiny ops with many threads; single-thread
+# gives 6-35x speedups for the small networks here (harmless when on GPU).
 torch.set_num_threads(1)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 FLAT = IMG * IMG            # 576 for 24x24 inputs
@@ -69,13 +69,18 @@ SPECIALISTS = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+def to_device(*ts):
+    """Move collated tensors to the compute device (no-op on CPU)."""
+    return tuple(t.to(DEVICE) for t in ts)
+
+
 def collate(batch):
     x = torch.stack([b[0] for b in batch])
     y = torch.stack([b[1] for b in batch])
     d = torch.stack([b[2] for b in batch])
     s = torch.stack([b[3] for b in batch])
     r = torch.stack([b[4] for b in batch])
-    return x, y, d, s, r
+    return to_device(x, y, d, s, r)
 
 
 def make_loader(ds, batch=128, shuffle=True):
@@ -229,9 +234,9 @@ def train_phase(model, train_ds, epochs, seed, lr, task, domain_w, goals,
             if goals is not None:                      # multi-goal protocol C
                 # two passes, one per goal, so each goal's head and its
                 # routing see clean targets
-                g0 = torch.zeros(x.size(0), dtype=torch.long)
+                g0 = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
                 out0, info = model(x, goal=g0, tau=tau, hard=hard)
-                g1 = torch.ones(x.size(0), dtype=torch.long)
+                g1 = torch.ones(x.size(0), dtype=torch.long, device=x.device)
                 out1, _ = model(x, goal=g1, tau=tau, hard=hard)
                 loss = (0.5 * F.cross_entropy(out0[:, :10], y)
                         + 0.5 * F.mse_loss(out1[:, :FLAT], x.reshape(x.size(0), -1)))
@@ -295,7 +300,7 @@ def train_model(model, train_ds, epochs, seed, lr=1e-3, task="cls",
     anything.
     """
     set_seed(seed)
-    model = model.to(DEVICE)
+    model.to(DEVICE)
     is_switch = hasattr(model, "route_logits")
     force_uniform = getattr(model, "force_uniform", False)
     router_frozen = is_switch and all(not p.requires_grad
@@ -321,7 +326,7 @@ def train_model(model, train_ds, epochs, seed, lr=1e-3, task="cls",
         with torch.no_grad():
             x0, y0, _, _, r0 = next(iter(make_loader(train_ds, batch=1024)))
             n_reg = int(r0.max().item()) + 1
-            ces_r = torch.zeros(n_reg, len(PRIMITIVES))
+            ces_r = torch.zeros(n_reg, len(PRIMITIVES), device=x0.device)
             for i, nm in enumerate(PRIMITIVES):
                 ce = F.cross_entropy(oracle_heads[nm](model.primitives[nm](x0)),
                                      y0, reduction="none")
@@ -417,7 +422,8 @@ def train_model(model, train_ds, epochs, seed, lr=1e-3, task="cls",
 
 def train_standalone(name, train_ds, epochs, seed, batch=128):
     set_seed(seed)
-    model = Standalone(name, n_classes=10).to(DEVICE)
+    model = Standalone(name, n_classes=10)
+    model.to(DEVICE)
     opt = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
     loader = make_loader(train_ds, batch=batch)
     for _ in range(epochs):
@@ -457,7 +463,7 @@ def get_bank(name, train_ds, epochs, seed, batch=128, subsets=None):
         else:
             ds = train_ds
             if subsets is not None and pname in subsets:
-                mask = torch.isin(train_ds.tensors[4],
+                mask = torch.isin(train_ds.tensors[4].to("cpu"),
                                   torch.tensor(subsets[pname]))
                 ds = TensorDataset(*[t[mask] for t in train_ds.tensors])
             m = train_standalone(pname, ds, epochs, seed, batch)
@@ -471,7 +477,8 @@ def get_bank(name, train_ds, epochs, seed, batch=128, subsets=None):
 
 def train_static(make, train_ds, epochs, seed, batch=128):
     set_seed(seed)
-    m = make().to(DEVICE)
+    m = make()
+    m.to(DEVICE)
     opt = torch.optim.Adam(m.parameters(), lr=1e-3)
     loader = make_loader(train_ds, batch=batch)
     for _ in range(epochs):
@@ -517,6 +524,7 @@ def protocol_a(seeds, epochs, n_train, n_test, smoke=False, batch=128):
         for name in PRIMITIVES:
             def _standalone(name=name, sd=gen_bank["prims"][name], hd=gen_bank["heads"][name]):
                 m = Standalone(name, n_classes=10)
+                m.to(DEVICE)
                 m.prim.load_state_dict(sd); m.head.load_state_dict(hd)
                 return round(eval_cls(m, test_ds)["acc"], 4)
             standalone[name], _ = with_chk("A", seed, epochs, n_train,
@@ -574,7 +582,7 @@ def protocol_a(seeds, epochs, n_train, n_test, smoke=False, batch=128):
                 pick = real_idx[torch.linspace(0, real_idx.numel() - 1, 24).long()]
                 model.eval()
                 with torch.no_grad():
-                    _, info = model(xs[pick], tau=0.5, hard=False)
+                    _, info = model(xs[pick].to(DEVICE), tau=0.5, hard=False)
                 save_playground_data(info["probs"].tolist(), ss[pick].tolist(),
                                      ys[pick].tolist(), xs[pick].numpy(),
                                      os.path.join(OUT, "playground.json"))
@@ -656,7 +664,7 @@ def protocol_b(seeds, epochs, n_train, n_test, n_real_finetune=200, batch=128):
             h = nn.Linear(64, 10)
             h.load_state_dict(sd)
             h.eval()
-            oh[pname] = h
+            oh[pname] = h.to(DEVICE)
         return oh
 
     for seed in seeds:
@@ -706,7 +714,7 @@ def protocol_b(seeds, epochs, n_train, n_test, n_real_finetune=200, batch=128):
         # router + task heads (4.7k params) with oracle supervision — the
         # routing learns which tool the real world needs; no weight is
         # rewritten.
-        sw2 = SwitchOperator(n_classes=10)
+        sw2 = SwitchOperator(n_classes=10).to(DEVICE)
         sw2.load_state_dict(switch.state_dict())
         for p in sw2.primitives.parameters():
             p.requires_grad = False
@@ -721,9 +729,9 @@ def protocol_b(seeds, epochs, n_train, n_test, n_real_finetune=200, batch=128):
                 loss = nn.functional.cross_entropy(out, y)
                 # oracle: which toolbox tool is least-bad on this real sample?
                 with torch.no_grad():
-                    ce = torch.zeros(len(PRIMITIVES), x.size(0))
+                    ce = torch.zeros(len(PRIMITIVES), x.size(0), device=x.device)
                     for i, nm in enumerate(PRIMITIVES):
-                        prim = Standalone(nm, n_classes=10)
+                        prim = Standalone(nm, n_classes=10).to(DEVICE)
                         prim.prim.load_state_dict(bank["prims"][nm])
                         prim.eval()
                         ce[i] = F.cross_entropy(oracle_h[nm](prim.prim(x)), y,
@@ -812,12 +820,12 @@ def protocol_c(seeds, epochs, n_train, n_test, batch=128):
             route_g0, route_g1 = [], []
             with torch.no_grad():
                 for x, y, d, s, r in loader:
-                    g0 = torch.zeros(x.size(0), dtype=torch.long)
+                    g0 = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
                     out0, info0 = model(x, goal=g0, tau=0.5)
                     acc_tot += (out0[:, :10].argmax(-1) == y).sum().item()
                     n_acc += y.size(0)
                     route_g0.append(info0["probs"])
-                    g1 = torch.ones(x.size(0), dtype=torch.long)
+                    g1 = torch.ones(x.size(0), dtype=torch.long, device=x.device)
                     out1, info1 = model(x, goal=g1, tau=0.5)
                     rec_tot += nn.functional.mse_loss(
                         out1[:, :FLAT], x.reshape(x.size(0), -1)).item() * x.size(0)
@@ -939,7 +947,15 @@ def main():
     ap.add_argument("--n_test", type=int, default=2000)
     ap.add_argument("--batch", type=int, default=128)
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--device", default=None,
+                    help="compute device: cuda/cpu (default: auto-detect)")
     args = ap.parse_args()
+    if args.device is not None and args.device != "auto":
+        global DEVICE
+        DEVICE = args.device
+        if DEVICE.startswith("cuda") and not torch.cuda.is_available():
+            print(f"[warn] --device {DEVICE} requested but CUDA unavailable; using cpu", flush=True)
+            DEVICE = "cpu"
 
     if args.smoke:
         args.seeds, args.epochs, args.n_train, args.n_test = 1, 2, 400, 200

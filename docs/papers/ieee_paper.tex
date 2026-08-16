@@ -13,7 +13,7 @@
 \usepackage[colorlinks=true,linkcolor=black,citecolor=blue,urlcolor=blue]{hyperref}
 \usepackage{algorithmic}
 
-\title{The Switch Operator: Self-Reconfiguring Neural Computation via\\Visual-Cue and Goal-Conditioned Routing}
+\title{The Dirty Man: Self-Reconfiguring Neural Computation via\\Visual-Cue and Goal-Conditioned Routing}
 \author{\IEEEauthorblockN{Sehaj Singh}
 \IEEEauthorblockA{\textit{Independent Research}\\
 2026, \url{sehaj@example.com}}}
@@ -22,7 +22,7 @@
 \maketitle
 
 \begin{abstract}
-We present the Switch Operator, a neural architecture that reconfigures its computation per input: a visual-cue ``eye'' and a goal pathway drive a differentiable router that selects among nine neural primitives (linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer), all emitting into a shared latent space. Staged training --- warm-start primitives, oracle-supervised router training, joint fine-tune, annealed Gumbel commitment --- prevents mixture collapse and yields a readable routing policy. On a procedural sim-to-real glyph benchmark (24$\times$24, 3 seeds): (i) one operator reaches 0.834 accuracy, above every fixed network (best static 0.829, best standalone 0.822, static CNN 0.789); (ii) zero-shot real transfer 0.474 vs.\ 0.388 for a sim-trained static CNN, cutting the transfer gap from 0.611 to 0.526; (iii) with 200 real labels, structure adaptation (4{,}659 parameters) reaches 0.475 real / 0.9997 sim vs.\ weight adaptation (16{,}330 parameters) at 0.395 / 0.984; (iv) goal-conditioned routing yields 4.1$\times$ better reconstruction (0.034 vs.\ 0.139 MSE) with no classification loss; (v) ablations of bottleneck, annealing, eye, and domain-invariance change accuracy by $\le$0.001. Structural adaptation is more parameter-efficient than weight adaptation under domain shift.
+We present the Dirty Man, a neural architecture whose core component --- the Switch Operator --- reconfigures its computation per input: a visual-cue ``eye'' and a goal pathway drive a differentiable router that selects among nine neural primitives (linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer), all emitting into a shared latent space. All experiments run on CUDA automatically when a GPU is available. Staged training --- warm-start primitives, oracle-supervised router training, joint fine-tune, annealed Gumbel commitment --- prevents mixture collapse and yields a readable routing policy. On a procedural sim-to-real glyph benchmark (24$\times$24, 3 seeds): (i) one operator reaches 0.834 accuracy, above every fixed network (best static 0.829, best standalone 0.822, static CNN 0.789); (ii) zero-shot real transfer 0.474 vs.\ 0.388 for a sim-trained static CNN, cutting the transfer gap from 0.611 to 0.526; (iii) with 200 real labels, structure adaptation (4{,}659 parameters) reaches 0.475 real / 0.9997 sim vs.\ weight adaptation (16{,}330 parameters) at 0.395 / 0.984; (iv) goal-conditioned routing yields 4.1$\times$ better reconstruction (0.034 vs.\ 0.139 MSE) with no classification loss; (v) ablations of bottleneck, annealing, eye, and domain-invariance change accuracy by $\le$0.001. Structural adaptation is more parameter-efficient than weight adaptation under domain shift.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -141,8 +141,8 @@ Mixture-of-experts \cite{switchtransformer,condcomp} routes tokens to parallel e
 \section{Conclusion}
 The Switch Operator shows that structural adaptation --- changing which network computes, per input, per goal --- is learnable, interpretable, transferable, and more parameter-efficient than weight adaptation under domain shift. Code, figures, and all numbers are committed and reproducible.
 
-\section*{Code}
-\url{https://github.com/sehajr-singhs/switch-operator}
+\section*{Code and reproducibility}
+\url{https://github.com/sehajr-singhs/switch-operator} --- every number is read from committed JSON result files by \texttt{make\_figs.py}; the benchmark is procedural (no downloads); \texttt{--device cuda} forces GPU execution and \texttt{run\_experiments.py --smoke} verifies the pipeline in ~1 minute.
 
 \begin{thebibliography}{9}
 \bibitem{switchtransformer} N.~Shazeer \emph{et al.}, ``Outrageously large neural networks: The sparsely-gated mixture-of-experts layer,'' \emph{ICLR}, 2017.

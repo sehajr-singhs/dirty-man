@@ -22,7 +22,7 @@
 \definecolor{link}{HTML}{226999}
 \definecolor{win}{HTML}{1A7A3C}
 
-\title{\bfseries The Switch Operator:\\A Self-Reconfiguring Neural Architecture that Rewires Its Computation\\from What It Sees and What It Wants}
+\title{\bfseries The Dirty Man:\\A Self-Reconfiguring Neural Architecture that Rewires Its Computation\\from What It Sees and What It Wants}
 \author{Sehaj Singh\\[2pt]
 \small Independent Research \textbullet\ 2026\\
 \small Correspondence: \url{sehaj@example.com}}
@@ -33,7 +33,7 @@
 
 \begin{abstract}
 \noindent
-We introduce the \textbf{Switch Operator}, a neural architecture that does not merely adjust its weights during learning --- it reconfigures its \emph{computation}. An attention-like ``eye'' extracts visual cues from the input; a goal pathway encodes the task; and a differentiable router selects, per sample, which of nine neural primitives --- linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, and transformer --- should process it. Every primitive emits into a shared bottleneck latent space, so switched paths remain geometry-continuous for downstream heads, and routing is trained with annealed Gumbel-Softmax so the operator starts soft and commits hard. On a procedural glyph benchmark with clean simulation and sensor-corrupted ``real'' domains, the operator reaches \textbf{0.834} accuracy --- above every fixed network (\emph{best static} ReLU: 0.822; static CNN: 0.789) --- by learning a \emph{policy}: flat lenses (dense) for clean sim inputs, spatial lenses (CNN) and piecewise lenses (ReLU) as corruption grows. Zero-shot, the operator cuts the sim-to-real transfer gap from 0.611 to 0.526. Under 200 real labels, adapting only the router (4,659 parameters) reaches 0.475 real accuracy while preserving sim at 0.9997, whereas full weight fine-tuning (16,330 parameters) reaches only 0.395 and forgets sim to 0.984. Conditioning routing on the goal pathway yields a 4$\times$ better reconstruction error (0.034 vs.\ 0.139) with no classification loss. Ablations removing the bottleneck, annealing, eye, and domain-invariance each change accuracy by $\le$0.001, showing the operator is robust to component removal. Our results establish structural adaptation --- changing \emph{which} network computes, not just \emph{how strongly} --- as a practical learning mechanism for domain shift, transfer, and multi-objective control.
+We introduce \textbf{the Dirty Man}, a neural architecture that does not merely adjust its weights during learning --- it reconfigures its \emph{computation}. Its core component, the \textbf{Switch Operator}, is a gating mechanism over nine neural primitives: An attention-like ``eye'' extracts visual cues from the input; a goal pathway encodes the task; and a differentiable router selects, per sample, which of nine neural primitives --- linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, and transformer --- should process it. Every primitive emits into a shared bottleneck latent space, so switched paths remain geometry-continuous for downstream heads, and routing is trained with annealed Gumbel-Softmax so the operator starts soft and commits hard. All experiments run on CUDA automatically when available. On a procedural glyph benchmark with clean simulation and sensor-corrupted ``real'' domains, the operator reaches \textbf{0.834} accuracy --- above every fixed network (\emph{best static} ReLU: 0.822; static CNN: 0.789) --- by learning a \emph{policy}: flat lenses (dense) for clean sim inputs, spatial lenses (CNN) and piecewise lenses (ReLU) as corruption grows. Zero-shot, the operator cuts the sim-to-real transfer gap from 0.611 to 0.526. Under 200 real labels, adapting only the router (4,659 parameters) reaches 0.475 real accuracy while preserving sim at 0.9997, whereas full weight fine-tuning (16,330 parameters) reaches only 0.395 and forgets sim to 0.984. Conditioning routing on the goal pathway yields a 4$\times$ better reconstruction error (0.034 vs.\ 0.139) with no classification loss. Ablations removing the bottleneck, annealing, eye, and domain-invariance each change accuracy by $\le$0.001, showing the operator is robust to component removal. Our results establish structural adaptation --- changing \emph{which} network computes, not just \emph{how strongly} --- as a practical learning mechanism for domain shift, transfer, and multi-objective control.
 \end{abstract}
 
 \noindent\textbf{Keywords:} dynamic neural architecture, mixture of experts, differentiable routing, sim-to-real transfer, structural adaptation, goal-conditioned computation.
@@ -47,7 +47,7 @@ Yet there is a growing body of evidence that structure matters as much as weight
 
 We ask a different question: \emph{what if the network could change which network it is?}
 
-We introduce the \textbf{Switch Operator}: a gating architecture whose router watches the input (through a visual-cue eye) and the task (through a goal pathway), then selects --- softly during training, hard at deployment --- which neural primitive computes each sample. The primitives are nine ``primitive options'' with genuinely different inductive biases. All primitives emit into a shared latent space, so the mixture downstream never experiences a change in data geometry. The result is a network that \emph{rewires its own computation} in response to what it sees and what it wants.
+We introduce the \textbf{Dirty Man}: an architecture whose router watches the input (through a visual-cue eye) and the task (through a goal pathway), then selects --- softly during training, hard at deployment --- which neural primitive computes each sample. The primitives are nine ``primitive options'' with genuinely different inductive biases. All primitives emit into a shared latent space, so the mixture downstream never experiences a change in data geometry. The result is a network that \emph{rewires its own computation} in response to what it sees and what it wants.
 
 Our contribution is not a new primitive; it is a mechanism for \emph{structural adaptation}, and we show it works where weight adaptation struggles:
 
@@ -60,6 +60,7 @@ Our contribution is not a new primitive; it is a mechanism for \emph{structural 
 
 \section{The Switch Operator}
 \label{sec:model}
+\textit{The Dirty Man is the full architecture; the Switch Operator is its core component --- the router plus the primitive bank.}
 
 \subsection{Architecture}
 
@@ -272,10 +273,29 @@ Table~\ref{tab:protD} shows the ablations. Removing the bottleneck, annealing, e
 \section{Conclusion}
 \label{sec:conclusion}
 
-We introduced the Switch Operator, a self-reconfiguring neural architecture that rewires which network computes each sample, driven by what it sees and what it wants. One operator beats every fixed network it contains; its router learns a readable structural policy; it transfers zero-shot and adapts with 3.5$\times$ fewer parameters than weight fine-tuning; and it serves multiple goals with 4$\times$ better reconstruction. Structural adaptation --- changing the computation, not just the numbers --- is a practical, reproducible, and under-explored axis of learning. The code, figures, and results are committed and fully reproducible.
+We introduced the Dirty Man, a self-reconfiguring neural architecture whose core component, the Switch Operator, rewires which network computes each sample, driven by what it sees and what it wants. One operator beats every fixed network it contains; its router learns a readable structural policy; it transfers zero-shot and adapts with 3.5$\times$ fewer parameters than weight fine-tuning; and it serves multiple goals with 4$\times$ better reconstruction. Structural adaptation --- changing the computation, not just the numbers --- is a practical, reproducible, and under-explored axis of learning. The code, figures, and results are committed and fully reproducible.
+
+\section*{Methods summary}
+\label{sec:methods}
+\noindent\textbf{Models.} The primitive bank contains nine architectures (linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer), each a small network with its own task head and a bottleneck adapter into a shared 64-dim latent. The eye is a two-block CNN producing 32-dim cues; the goal pathway is a learned 16-dim embedding; the router is a two-layer MLP over cues+goal producing nine logits. Routing weights come from Gumbel-Softmax with temperature annealed $\tau: 4\to0.5$ via a cosine schedule; evaluation uses the argmax primitive.
+
+\noindent\textbf{Training.} Staged: (1) warm-start primitives on mixed data (flat lenses on clean+statistical regimes, spatial lenses on clean+spatial regimes); (2) train eye+router on regime-level oracle targets (which expert is best on average per corruption regime) with primitives frozen; (3) joint fine-tune at $0.3\times$ learning rate; (4) deploy hard. Adam, lr $10^{-3}$ (joint $3\times10^{-4}$), weight decay $10^{-5}$, batch 128, 12 epochs, 3 seeds. Auxiliary losses: load-balancing (weight 0.2), routing entropy (0.01), autoencoder reconstruction (0.5), GAN generator (0.05), switching pressure (0.4 in router stage).
+
+\noindent\textbf{Benchmark.} Digits 0--9 rendered as anti-aliased parametric strokes at 24$\times$24 with geometric jitter. Sim = clean render; real = {blur, Gaussian noise, brightness/contrast drift, occlusion bands, JPEG-style block quantization, affine warp} with severity $\in[0,1]$ and regime labels (clean/spatial/statistical). 6{,}000 train / 2{,}000 test, disjoint random streams. Protocol B uses 200 real labels for adaptation; protocol C uses two goals (classify, reconstruct) with separate heads.
+
+\noindent\textbf{Compute.} All training runs on CUDA automatically when available (\texttt{--device cuda}; auto-detected); the same code path runs single-threaded on CPU. Each full seed of protocol A takes \textasciitilde15 min on a laptop CPU and substantially less on GPU; runs checkpoint per item and resume.
 
 \section*{Data and code availability}
 All experiments, figures, and numbers in this manuscript are generated from the committed repository (\url{https://github.com/sehajr-singhs/switch-operator}); the benchmark is procedural and needs no downloads; every table value is read from committed JSON result files by \texttt{make\_figs.py} and \texttt{run\_experiments.py --only A/B/C/D}.
+
+\section*{Competing interests}
+The author declares no competing interests.
+
+\section*{Author contributions}
+S.S. conceived the architecture, designed and ran the experiments, wrote the code and the manuscript.
+
+\section*{Acknowledgements}
+No external funding. The author thanks the open-source communities behind PyTorch, NumPy, and matplotlib.
 
 \begin{thebibliography}{9}
 \bibitem[Shazeer et al., 2017]{switchtransformer} Shazeer, N., Mirhoseini, A., Maziarz, K., Davis, A., Le, Q., Hinton, G., Dean, J. Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer. \emph{ICLR} 2017.

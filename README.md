@@ -1,8 +1,6 @@
-# The Switch Operator
+# The Dirty Man
 
-**A self-reconfiguring neural architecture that rewires which network computes each sample — driven by what it sees and what it wants.**
-
-The Switch Operator is a gating architecture over nine neural *primitives* — **linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer** — each with its own internal layers and inductive lens. A visual-cue **eye** watches the input, a **goal pathway** encodes the task, and a differentiable **router** decides, per sample, which primitive (or soft combination) processes it. Every primitive emits into a shared bottleneck latent space, so switched paths stay geometry-continuous for the downstream head. Routing uses annealed Gumbel-Softmax (soft during training, hard at deployment) and a staged protocol — warm-start primitives, oracle-supervised router training, joint fine-tune — that prevents mixture collapse and yields a *readable routing policy*.
+The Dirty Man is a self-reconfiguring neural architecture that rewires which network computes each sample — driven by what it sees and what it wants. Its core component is the **Switch Operator**: a gating mechanism over nine neural *primitives* — **linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer** — each with its own internal layers and inductive lens. A visual-cue **eye** watches the input, a **goal pathway** encodes the task, and a differentiable **router** decides, per sample, which primitive (or soft combination) processes it. Every primitive emits into a shared bottleneck latent space, so switched paths stay geometry-continuous for the downstream head. Routing uses annealed Gumbel-Softmax (soft during training, hard at deployment) and a staged protocol — warm-start primitives, oracle-supervised router training, joint fine-tune — that prevents mixture collapse and yields a *readable routing policy*.
 
 ```text
 input ──► [eye: visual cues] ─┐
@@ -45,7 +43,7 @@ python make_playground.py
 python -m pytest tests/ -q
 ```
 
-CLI options: `--epochs` (default 12), `--n_train` (6000), `--n_test` (2000), `--batch` (128), `--seed-start`, `--smoke`.
+CLI options: `--epochs` (default 12), `--n_train` (6000), `--n_test` (2000), `--batch` (128), `--seed-start`, `--smoke`, and `--device cuda|cpu` (default: auto-detect — CUDA is used automatically when available; batches and models are moved to the device throughout).
 
 ## Repository layout
 

@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="description" content="The Switch Operator: a self-reconfiguring neural architecture that rewires which network computes each sample — driven by what it sees (visual-cue eye) and what it wants (goal pathway). Nine primitives, one differentiable router, one operator that beats every fixed network it contains.">
+  <meta name="description" content="The Dirty Man: a self-reconfiguring neural architecture whose core component, the Switch Operator, rewires which network computes each sample — driven by what it sees (visual-cue eye) and what it wants (goal pathway). Nine primitives, one differentiable router, one operator that beats every fixed network it contains.">
   <meta name="keywords" content="dynamic neural architecture, mixture of experts, differentiable routing, gumbel-softmax, sim-to-real transfer, structural adaptation, goal-conditioned computation, switch operator">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>The Switch Operator — the network that rewires itself</title>
+  <title>The Dirty Man — the network that rewires itself</title>
 
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/computer-modern/cmu-serif.css">
@@ -303,14 +303,14 @@
 <!-- ================= HERO ================= -->
 <section class="hero">
   <div class="container has-text-centered">
-    <h1 class="publication-title">The <strong>Switch Operator</strong></h1>
-    <p class="publication-sub">A self-reconfiguring neural architecture that <strong>rewires which network
-      computes each sample</strong> — driven by what it sees and what it wants. A visual-cue eye watches the
-      input, a goal pathway encodes the task, and a differentiable router picks the right neural primitive:
-      <em>linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, or transformer</em>. <em>One operator beats
-      every fixed network it contains.</em></p>
+    <h1 class="publication-title">The <strong>Dirty Man</strong></h1>
+    <p class="publication-sub">A self-reconfiguring neural architecture whose core component, the
+      <strong>Switch Operator</strong>, <strong>rewires which network computes each sample</strong> — driven by
+      what it sees and what it wants. A visual-cue eye watches the input, a goal pathway encodes the task, and a
+      differentiable router picks the right neural primitive: <em>linear, dense, ReLU, CNN, RNN, LSTM, GAN,
+      autoencoder, or transformer</em>. <em>One operator beats every fixed network it contains.</em></p>
     <p class="publication-authors">Sehaj Singh</p>
-    <p class="publication-venue">Research prototype &middot; dynamic neural architecture &middot; 2026</p>
+    <p class="publication-venue">Research prototype &middot; dynamic neural architecture &middot; CUDA-ready &middot; 2026</p>
 
     <div class="publication-links">
       <a class="external-link button" href="papers/nmi_paper.pdf">
@@ -607,12 +607,13 @@
   <div class="container">
     <h2 class="title">Run it yourself</h2>
     <div class="content has-text-justified">
-      <p>Python 3.9+ with <code>torch</code> and <code>numpy</code> (matplotlib for figures). Every paper number
-        is produced by these scripts from the committed result files — nothing is hard-coded. Runs checkpoint
-        per item and resume across interruptions.</p>
+      <p>Python 3.9+ with <code>torch</code> and <code>numpy</code> (matplotlib for figures). CUDA is
+        auto-detected and used automatically (<code>--device cuda</code> to force); every batch and model is
+        moved to the device end-to-end. Every paper number is produced by these scripts from the committed
+        result files — nothing is hard-coded. Runs checkpoint per item and resume across interruptions.</p>
     </div>
     <pre>pip install -r requirements.txt
-python run_experiments.py --smoke                  # 4 protocols at tiny scale (~2 min)
+python run_experiments.py --smoke                  # 4 protocols at tiny scale (auto-uses GPU)
 python run_experiments.py --only A --seeds 3       # mixed-domain benchmark
 python run_experiments.py --only B --seeds 3       # sim-to-real transfer
 python run_experiments.py --only C --seeds 3       # goal-conditioned routing
