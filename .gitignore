@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.log
+*.aux
+*.out
+*.toc
+*.bbl
+*.blg
+*.nav
+*.snm
+.pytest_cache/
+
+# regenerable model checkpoints (run run_experiments.py to rebuild)
+results/bank_*

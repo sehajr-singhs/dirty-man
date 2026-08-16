@@ -1,0 +1,10 @@
+{"kind": "unadapted_switch", "real": 0.493, "sim": 1.0}
+{"kind": "static_cnn", "real": 0.37, "sim": 0.999}
+{"n_real": 50, "struct_real": 0.469, "struct_sim": 1.0, "weight_real": 0.421, "weight_sim": 0.999, "struct_params": 4659, "weight_params": 16330}
+{"n_real": 100, "struct_real": 0.475, "struct_sim": 1.0, "weight_real": 0.408, "weight_sim": 0.999, "struct_params": 4659, "weight_params": 16330}
+{"n_real": 200, "struct_real": 0.477, "struct_sim": 1.0, "weight_real": 0.402, "weight_sim": 0.984, "struct_params": 4659, "weight_params": 16330}
+{"kind": "unadapted_switch", "real": 0.493, "sim": 1.0}
+{"kind": "static_cnn", "real": 0.37, "sim": 0.999}
+{"n_real": 50, "struct_real": 0.469, "struct_sim": 1.0, "weight_real": 0.421, "weight_sim": 0.999, "struct_params": 4659, "weight_params": 16330}
+{"n_real": 100, "struct_real": 0.475, "struct_sim": 1.0, "weight_real": 0.408, "weight_sim": 0.999, "struct_params": 4659, "weight_params": 16330}
+{"n_real": 200, "struct_real": 0.477, "struct_sim": 1.0, "weight_real": 0.402, "weight_sim": 0.984, "struct_params": 4659, "weight_params": 16330}

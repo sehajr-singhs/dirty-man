@@ -1,0 +1,36 @@
+{
+  "protocol": "B",
+  "n_train": 6000,
+  "n_test": 2000,
+  "n_real_finetune": 200,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "epochs": 12,
+  "batch": 128,
+  "toolbox": "bank_A",
+  "mean": {
+    "static_cnn": {
+      "acc_sim": 0.999,
+      "acc_real": 0.3877,
+      "gap": 0.6113
+    },
+    "switch": {
+      "acc_sim": 0.9997,
+      "acc_real": 0.474,
+      "gap": 0.5257
+    },
+    "weight_adapted": {
+      "acc_real": 0.395,
+      "acc_sim": 0.9843,
+      "adapted_params": 16330.0
+    },
+    "structure_adapted": {
+      "acc_real": 0.475,
+      "acc_sim": 0.9997,
+      "adapted_params": 4659.0
+    }
+  }
+}

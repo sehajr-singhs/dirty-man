@@ -1,0 +1,38 @@
+{
+  "protocol": "D",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "epochs": 12,
+  "n_train": 6000,
+  "n_test": 2000,
+  "batch": 128,
+  "models": {
+    "full": {
+      "acc": 0.8238,
+      "acc_real": 0.6477
+    },
+    "no_anneal": {
+      "acc": 0.8238,
+      "acc_real": 0.6477
+    },
+    "random_router": {
+      "acc": 0.8233,
+      "acc_real": 0.647
+    },
+    "no_bottleneck": {
+      "acc": 0.8243,
+      "acc_real": 0.6487
+    },
+    "no_eye": {
+      "acc": 0.823,
+      "acc_real": 0.646
+    },
+    "domain_inv": {
+      "acc": 0.8232,
+      "acc_real": 0.6463
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "static_cnn": {
+    "acc_sim": 0.999,
+    "acc_real": 0.406,
+    "gap": 0.593
+  },
+  "switch": {
+    "acc_sim": 1.0,
+    "acc_real": 0.501,
+    "gap": 0.499
+  },
+  "weight_adapted": {
+    "acc_real": 0.408,
+    "acc_sim": 0.985,
+    "adapted_params": 16330
+  },
+  "structure_adapted": {
+    "acc_real": 0.5,
+    "acc_sim": 1.0,
+    "adapted_params": 4659
+  }
+}

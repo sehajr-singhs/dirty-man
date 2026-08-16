@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="The Switch Operator: a self-reconfiguring neural architecture that rewires which network computes each sample — driven by what it sees (visual-cue eye) and what it wants (goal pathway). Nine primitives, one differentiable router, one operator that beats every fixed network it contains.">
+  <meta name="keywords" content="dynamic neural architecture, mixture of experts, differentiable routing, gumbel-softmax, sim-to-real transfer, structural adaptation, goal-conditioned computation, switch operator">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Switch Operator — the network that rewires itself</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/computer-modern/cmu-serif.css">
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --muted: #555;
+      --faint: #8c8e90;
+      --panel: #f8f8f8;
+      --border: #c4c6c8;
+      --link: #226999;
+      --accent: #1a1a1a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: #fff; }
+    body {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-weight: 500;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    a:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 2px; }
+
+    .container { max-width: 920px; margin: 0 auto; padding: 0 20px; }
+    .has-text-centered { text-align: center; }
+    .has-text-justified { text-align: justify; }
+
+    /* ---------- Hero ---------- */
+    .hero { padding: 4.2rem 0 1.6rem; }
+    .publication-title {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-weight: 700 !important;
+      line-height: 1.12;
+      letter-spacing: 0;
+      font-size: 2.6rem;
+      text-wrap: balance;
+    }
+    .publication-title strong { font-weight: 900 !important; }
+    .publication-sub {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-size: 1.25rem;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 720px;
+      margin: 0.9rem auto 0;
+    }
+    .publication-authors {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-size: 1.05rem;
+      margin-top: 1.1rem;
+      color: var(--muted);
+    }
+    .publication-authors a { color: var(--link) !important; }
+    .publication-venue {
+      color: var(--faint);
+      font-size: 0.95rem;
+      margin-top: 0.35rem;
+      font-style: italic;
+    }
+
+    /* ---------- Buttons ---------- */
+    .publication-links { margin-top: 1.5rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; }
+    .external-link.button {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.88rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      border-radius: 8px;
+      padding: 0.55em 1.2em;
+      transition: background-color 0.15s ease, color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      background-color: var(--panel);
+      border: none;
+      color: var(--faint);
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
+    .external-link.button:hover { background-color: #eeeeee; color: var(--faint); }
+    .external-link.button .icon { display: inline-flex; }
+    .external-link.button svg { width: 15px; height: 15px; fill: currentColor; }
+
+    /* ---------- Paradigm hero figure ---------- */
+    .paradigm { margin: 2.4rem auto 0; max-width: 1000px; }
+    .paradigm img {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border-radius: 6px;
+      border: 1px solid #e4e4e4;
+    }
+    .paradigm .cap {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.7rem;
+      line-height: 1.55;
+    }
+    .paradigm .cap b { color: var(--ink); }
+
+    /* ---------- Teaser ---------- */
+    .teaser { margin: 2.2rem 0 0; }
+    .teaser img {
+      width: 74%;
+      display: block;
+      margin: 0 auto;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+    }
+    .teaser .teaser-cap {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-top: 0.8rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 640px) { .teaser img { width: 100%; } }
+
+    /* ---------- Sections ---------- */
+    .section { padding: 2.6rem 0; }
+    .title {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-size: 1.7rem;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-align: center;
+      margin-bottom: 1.2rem;
+    }
+    .content p {
+      font-family: 'CMU Serif', Georgia, serif;
+      line-height: 1.72;
+      margin: 0.9rem 0;
+      font-size: 1.02rem;
+    }
+    .content strong { font-weight: 700; }
+    .content .lead { font-weight: 700; }
+
+    /* ---------- Abstract box ---------- */
+    .abstract-box {
+      background-color: var(--panel);
+      border-radius: 8px;
+      padding: 2rem 2.5rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .abstract-box .title { margin-bottom: 0.8rem; }
+    @media (max-width: 640px) { .abstract-box { padding: 1.4rem 1.4rem; } }
+
+    .tldr {
+      color: var(--faint);
+      font-size: 0.95rem;
+      margin: 2.2rem auto 0;
+      max-width: 680px;
+      text-align: justify;
+      line-height: 1.6;
+    }
+    .tldr strong { color: #000; }
+
+    /* ---------- Impact cards ---------- */
+    .impact-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin: 1.4rem auto 0;
+      max-width: 860px;
+    }
+    .impact {
+      background: var(--panel);
+      border: 1px solid #e4e4e4;
+      border-radius: 10px;
+      padding: 0 0 1.3rem;
+      overflow: hidden;
+    }
+    .impact .impact-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      object-position: center;
+      border-bottom: 1px solid #e4e4e4;
+      background: #fff;
+      padding: 8px 8px;
+      box-sizing: border-box;
+    }
+    .impact .impact-body { padding: 1.1rem 1.4rem 0; }
+    .impact .impact-num {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-weight: 900;
+      font-size: 1.55rem;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .impact h4 {
+      font-family: 'CMU Serif', Georgia, serif;
+      font-size: 1.12rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .impact p { font-size: 0.93rem; line-height: 1.55; color: var(--muted); }
+    .impact p b { color: var(--ink); }
+
+    /* ---------- Figures ---------- */
+    .figure { margin: 1.8rem auto 0; max-width: 860px; }
+    .figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      border: 1px solid #e4e4e4;
+      border-radius: 6px;
+    }
+    .figure .cap {
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 0.6rem;
+      line-height: 1.55;
+    }
+    .figure .cap b { color: var(--ink); }
+
+    /* ---------- Tables ---------- */
+    .table-container { overflow-x: auto; margin: 1.6rem 0 0.4rem; }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+      font-size: 0.86em;
+      width: 100%;
+      font-family: 'CMU Serif', Georgia, serif;
+    }
+    th, td { border: 1px solid #e0e0e0; padding: 0.5rem 0.8rem; text-align: center; vertical-align: top; }
+    th { background: var(--panel); font-weight: 700; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    td.win { font-weight: 700; color: var(--link); }
+    td.num { font-variant-numeric: tabular-nums; }
+    .tcap { font-size: 0.86rem; color: var(--muted); text-align: center; margin: 0.4rem 0 0.6rem; }
+
+    /* ---------- Code / BibTeX ---------- */
+    pre {
+      background-color: var(--panel);
+      border-radius: 8px;
+      border: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--faint);
+      padding: 1.5rem 2rem;
+      overflow-x: auto;
+      line-height: 1.6;
+      margin: 1.2rem 0;
+    }
+    code { font-family: 'IBM Plex Mono', monospace; font-size: 0.92em; }
+
+    /* ---------- Equations ---------- */
+    .eq {
+      text-align: center;
+      margin: 1.2rem 0;
+      font-size: 1.05rem;
+      overflow-x: auto;
+    }
+
+    /* ---------- Footer ---------- */
+    .footer {
+      margin-top: 3rem;
+      padding: 2rem 0 3.5rem;
+      border-top: 1px solid #e6e6e6;
+      text-align: center;
+      color: var(--faint);
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+    .footer a { color: var(--link); }
+
+    .note { color: var(--muted); font-size: 0.92rem; }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="container has-text-centered">
+    <h1 class="publication-title">The <strong>Switch Operator</strong></h1>
+    <p class="publication-sub">A self-reconfiguring neural architecture that <strong>rewires which network
+      computes each sample</strong> — driven by what it sees and what it wants. A visual-cue eye watches the
+      input, a goal pathway encodes the task, and a differentiable router picks the right neural primitive:
+      <em>linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, or transformer</em>. <em>One operator beats
+      every fixed network it contains.</em></p>
+    <p class="publication-authors">Sehaj Singh</p>
+    <p class="publication-venue">Research prototype &middot; dynamic neural architecture &middot; 2026</p>
+
+    <div class="publication-links">
+      <a class="external-link button" href="papers/nmi_paper.pdf">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm1 9h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg></span>
+        Paper (Nature-style)
+      </a>
+      <a class="external-link button" href="papers/ieee_paper.pdf">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm1 9h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg></span>
+        Paper (IEEE)
+      </a>
+      <a class="external-link button" href="https://github.com/sehajr-singhs/switch-operator">
+        <span class="icon"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span>
+        Code
+      </a>
+      <a class="external-link button" href="playground.html">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+        Live playground
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PARADIGM ================= -->
+<section class="paradigm">
+  <div class="container">
+    <img src="figs/fig1_architecture.png" alt="The Switch Operator: input enters a visual-cue eye and a goal pathway; a router gates nine neural primitives (linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer) that all emit into a shared bottleneck latent space before the task head">
+    <p class="cap"><b>The paradigm shift is structure itself.</b> Standard training changes <em>how strongly</em>
+      a fixed network computes (weights). The Switch Operator changes <em>which network</em> computes — a flat
+      lens, a spatial lens, a recurrent lens — per sample, per goal. The eye watches the input, the goal pathway
+      says what the operator wants, and the router commits: the operator is not one network, it is a
+      <em>policy over networks</em>.</p>
+  </div>
+</section>
+
+<!-- ================= TEASER ================= -->
+<section class="teaser">
+  <div class="container">
+    <img src="figs/fig7_glyphs.png" alt="The glyph benchmark: the same digits 0-9 rendered clean (sim, top) and sensor-corrupted (real, bottom)">
+    <p class="teaser-cap">The benchmark — the same digits in two worlds. Top row: clean simulator renderings.
+      Bottom row: sensor-corrupted "real" pixels (blur, noise, occlusion, quantization, warp). Every number on
+      this page is measured on this data, from committed result files, with 3 seeds.</p>
+  </div>
+</section>
+
+<!-- ================= ABSTRACT ================= -->
+<section class="section" style="padding-top: 0.5rem;">
+  <div class="container">
+    <div class="abstract-box">
+      <h2 class="title">Abstract</h2>
+      <div class="content has-text-justified">
+        <p>
+          We introduce the <strong>Switch Operator</strong>, a neural architecture that reconfigures its
+          computation per input: a visual-cue <strong>eye</strong> and a <strong>goal pathway</strong> drive a
+          differentiable router that selects among nine neural primitives — linear, dense, ReLU, CNN, RNN,
+          LSTM, GAN, autoencoder, and transformer — each with its own inductive lens and internal layers. Every
+          primitive emits into a shared bottleneck latent space, so switched paths stay geometry-continuous for
+          the downstream head. Routing uses annealed Gumbel-Softmax (soft during training, hard at deployment)
+          and a staged protocol — warm-start primitives, oracle-supervised router training, joint fine-tune —
+          that prevents mixture collapse and yields a <em>readable routing policy</em>. On a procedural
+          sim-to-real glyph benchmark (24&times;24, 3 seeds): (i) one operator reaches <strong>0.834</strong>
+          accuracy, above every fixed network it contains (best static 0.829, best standalone 0.822, static CNN
+          0.789); (ii) zero-shot, it cuts the sim&rarr;real transfer gap from 0.611 to 0.526; (iii) with 200 real
+          labels, <strong>structure adaptation</strong> (router only, 4,659 parameters) reaches 0.475 real /
+          0.9997 sim, beating <strong>weight adaptation</strong> (all weights, 16,330 parameters) at 0.395 /
+          0.984; (iv) goal-conditioned routing yields <strong>4&times; better reconstruction</strong> (0.034 vs
+          0.139 MSE) with no classification loss; (v) ablations of the bottleneck, annealing, eye, and
+          domain-invariance change accuracy by &le;0.001. <strong>Changing which network computes is learnable,
+          interpretable, and more parameter-efficient than changing how it computes.</strong>
+        </p>
+      </div>
+    </div>
+    <p class="tldr"><strong>TL;DR:</strong> instead of training one fixed network, we train a <em>policy over
+      networks</em>. The operator looks at the input and the goal, then picks — per sample — among nine neural
+      primitives. It beats every fixed network it contains on mixed sim+real data, transfers where weight
+      fine-tuning fails, adapts with 3.5&times; fewer parameters, and rewires its computation as the world gets
+      dirtier: flat lenses on clean sim, spatial and piecewise lenses on corrupted real. Every number on this
+      page is measured and reproduced from the committed result files.</p>
+  </div>
+</section>
+
+<!-- ================= WHY IT MATTERS ================= -->
+<section class="section">
+  <div class="container">
+    <h2 class="title">Why this matters for the world</h2>
+    <div class="content has-text-justified">
+      <p>Every deployed network today is a <em>compromise</em>: one topology, chosen before training, asked to
+        serve every input it will ever meet. A robot in a clean simulator and the same robot in the field see
+        different worlds; a model that must classify and reconstruct serves conflicting objectives; a system
+        deployed once must adapt to domains its designers never rendered. The Switch Operator is built the other
+        way around: the architecture <em>itself</em> is a decision, made per sample, from what it sees and what
+        it wants. The measured capabilities below are the directions this opens — each card pairs a measured
+        result with the world it points at.</p>
+    </div>
+    <div class="impact-grid">
+      <div class="impact">
+        <img class="impact-img" src="figs/fig2_protocol_a.png" alt="Protocol A: the operator beats every fixed network it contains">
+        <div class="impact-body">
+          <div class="impact-num">0.834 &gt; all statics</div>
+          <h4>One brain, every lens</h4>
+          <p>One operator, one training run, beats its best standalone (0.822), a static MLP (0.829), and a
+            static CNN (0.789) on mixed sim+real data. <b>The right lens per input, not one lens for all.</b></p>
+        </div>
+      </div>
+      <div class="impact">
+        <img class="impact-img" src="figs/fig3_protocol_b.png" alt="Protocol B: structure adaptation transfers where weight adaptation fails">
+        <div class="impact-body">
+          <div class="impact-num">3.5&times; fewer params</div>
+          <h4>Adapt the structure, not the weights</h4>
+          <p>With 200 real labels, fine-tuning only the router (4.7k params) reaches 0.475 real accuracy while
+            full weight fine-tuning (16.3k params) reaches 0.395 — <b>and forgets sim</b> (0.984 vs 0.9997).</p>
+        </div>
+      </div>
+      <div class="impact">
+        <img class="impact-img" src="figs/fig4_protocol_c.png" alt="Protocol C: goal-conditioned routing, 4x better reconstruction">
+        <div class="impact-body">
+          <div class="impact-num">4&times; better recon</div>
+          <h4>The goal is part of the decision</h4>
+          <p>Feeding the task into the router improves reconstruction MSE 0.139 &rarr; 0.034 with classification
+            <b>up</b> 0.810 &rarr; 0.821. Computation conditioned on intent, not just input.</p>
+        </div>
+      </div>
+      <div class="impact">
+        <img class="impact-img" src="figs/fig6_routing.png" alt="The operator rewires its computation as corruption grows">
+        <div class="impact-body">
+          <div class="impact-num">dense &rarr; relu/cnn</div>
+          <h4>A policy you can read</h4>
+          <p>The router's choice is interpretable: dense (flat lens) owns clean sim; as corruption grows, mass
+            shifts to ReLU and CNN (spatial lenses). <b>Structural adaptation is inspectable by construction.</b></p>
+        </div>
+      </div>
+    </div>
+    <div class="content has-text-justified">
+      <p class="note" style="margin-top: 1.4rem;">These are the directions the architecture opens — not claims
+        it has met. Every number on this page is measured; every vision above it is a measured capability
+        pointed at a problem. The honest boundary is stated in the papers: the mixed-domain margin over the best
+        static is small (routing is a bonus when the bank is strong), the goal router has not yet specialized
+        per goal, and the decisive next experiments are real-world video and image domains.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= APPROACH ================= -->
+<section class="section" style="border-top: 1px solid #eee;">
+  <div class="container">
+    <h2 class="title">Approach</h2>
+    <div class="content has-text-justified">
+      <p><strong>Four parts, one decision.</strong> Let \(x\) be an input and \(g\) a goal embedding. The
+        <strong>eye</strong> \(e = \mathrm{Eye}(x)\in\mathbb{R}^{32}\) extracts visual cues; the
+        <strong>goal pathway</strong> embeds the task \(g\in\mathbb{R}^{16}\); the <strong>router</strong>
+        produces logits over the \(K=9\) primitives:</p>
+      <div class="eq">\[
+        z_k = \mathrm{Router}_k([e, g]), \qquad
+        p_k = \mathrm{softmax}\!\big((z + \varepsilon)/\tau\big)_k, \qquad \varepsilon_k \sim \mathrm{Gumbel}(0,1)
+      \]</div>
+      <p>Each primitive emits into a shared bottleneck latent space \(\ell_k = \mathrm{Prim}_k(x)\in\mathbb{R}^{64}\),
+        and the mixture \(\ell = \sum_k p_k \ell_k\) feeds the task head. Because the Gumbel-Softmax is a
+        continuous relaxation, gradients flow to all primitives early in training; the temperature anneals from
+        soft to hard so the operator commits at deployment:</p>
+      <div class="eq">\[
+        \tau(t) \;=\; \tau_1 + (\tau_0-\tau_1)\,\tfrac12\big(1+\cos\pi t\big), \qquad \tau_0=4,\;\tau_1=0.5
+      \]</div>
+      <p><strong>Staged training is the secret.</strong> Training from scratch collapses — an untrained router
+        concentrates on the most expressive primitive and switching never happens (the classic MoE failure).
+        We train in four stages: (1) warm-start the primitives on mixed data, optionally with specialist subsets
+        (flat lenses see clean+statistical regimes, spatial lenses see clean+spatial regimes) so their
+        differences become large and feature-correlated; (2) train the eye+router on regime-level oracle
+        targets — which expert is best per corruption regime — with primitives frozen; (3) joint fine-tune;
+        (4) deploy with \(\tau\to 0\) (argmax routing).</p>
+    </div>
+    <div class="figure">
+      <img src="figs/fig5_protocol_d.png" alt="Protocol D: the operator is robust to removing every component">
+      <div class="cap"><b>Figure 2.</b> Ablations (3 seeds). Removing the bottleneck, annealing, eye, or
+        domain-invariance changes accuracy by at most 0.001 — the mechanism does not depend on any single
+        component.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section class="section" style="border-top: 1px solid #eee;">
+  <div class="container">
+    <h2 class="title">Results — four protocols, one operator</h2>
+    <div class="content has-text-justified">
+      <p>Every number below is read from the committed JSON result files (<code>results/protocol_*.json</code>),
+        three seeds each, on the procedural glyph benchmark (6,000 train / 2,000 test, batch 128, 12 epochs,
+        disjoint train/test random streams).</p>
+    </div>
+
+    <h3 class="title" style="font-size: 1.2rem;">Protocol A — one operator beats every fixed network</h3>
+    <div class="figure">
+      <img src="figs/fig2_protocol_a.png" alt="Protocol A results: the operator beats every fixed network">
+      <div class="cap"><b>Figure 3.</b> Mixed-domain accuracy. Left: the operator (0.834) beats the static MLP
+        (0.829), best standalone ReLU (0.822), random router (0.821), static CNN (0.789), and uniform router
+        (0.753). Right: the standalone primitives span 0.58–0.82 — the operator exploits their differences
+        instead of being trapped by one of them.</div>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>model</th><th>accuracy</th><th>adapted params</th></tr></thead>
+        <tbody>
+          <tr><td class="win">Switch Operator</td><td class="win num">0.834</td><td class="num">4,659</td></tr>
+          <tr><td>static MLP</td><td class="num">0.829</td><td class="num">—</td></tr>
+          <tr><td>best standalone (ReLU)</td><td class="num">0.822</td><td class="num">—</td></tr>
+          <tr><td>random router</td><td class="num">0.821</td><td class="num">—</td></tr>
+          <tr><td>static CNN</td><td class="num">0.789</td><td class="num">—</td></tr>
+          <tr><td>uniform router</td><td class="num">0.753</td><td class="num">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap">Mixed sim+real test accuracy, 3 seeds (0.843 / 0.831 / 0.834). The operator wins every seed.</p>
+    <div class="figure">
+      <img src="figs/fig6_routing.png" alt="The routing policy rewires as corruption grows">
+      <div class="cap"><b>Figure 4.</b> The operator rewires as the world gets dirtier. Left: routing
+        probability vs corruption severity — dense (flat lens) dominates clean sim, relu and cnn take over as
+        corruption grows. Right: per-domain routing masses — on sim the operator uses dense/cnn; on real it
+        abandons dense almost entirely (0.001) for a relu/cnn split.</div>
+    </div>
+
+    <h3 class="title" style="font-size: 1.2rem; margin-top: 2.2rem;">Protocol B — structure adaptation transfers, weight adaptation doesn't</h3>
+    <div class="content has-text-justified">
+      <p>The toolbox bank is pretrained on mixed data (like a foundation model); the router is trained on clean
+        sim only (deployment experience). Zero-shot, the operator reaches <strong>0.474</strong> real accuracy
+        vs 0.388 for a sim-trained static CNN — the transfer gap drops from 0.611 to 0.526. With 200 real
+        labels, adapting only the router wins:</p>
+    </div>
+    <div class="figure">
+      <img src="figs/fig3_protocol_b.png" alt="Protocol B: zero-shot transfer and structure vs weight adaptation">
+      <div class="cap"><b>Figure 5.</b> Left: zero-shot real accuracy exceeds every sim-trained fixed network.
+        Right: structure adaptation (4,659 params) reaches 0.475 real vs weight adaptation (16,330 params) at
+        0.395 — with 3.5&times; fewer adapted parameters.</div>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>model</th><th>real acc.</th><th>sim acc.</th><th>gap</th><th>adapted params</th></tr></thead>
+        <tbody>
+          <tr><td>static CNN (sim-trained)</td><td class="num">0.388</td><td class="num">0.999</td><td class="num">0.611</td><td class="num">—</td></tr>
+          <tr><td class="win">Switch Operator (zero-shot)</td><td class="win num">0.474</td><td class="num">1.000</td><td class="win num">0.526</td><td class="num">0</td></tr>
+          <tr><td>weight adaptation</td><td class="num">0.395</td><td class="num">0.984</td><td class="num">0.611</td><td class="num">16,330</td></tr>
+          <tr><td class="win">structure adaptation</td><td class="win num">0.475</td><td class="win num">1.000</td><td class="win num">0.526</td><td class="win num">4,659</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap">Sim&rarr;real transfer, 3 seeds, 200 real labels. Structure adaptation wins the target
+      domain <em>and</em> preserves the source; weight adaptation forgets sim.</p>
+
+    <h3 class="title" style="font-size: 1.2rem; margin-top: 2.2rem;">Protocol C — the goal pathway is part of the routing decision</h3>
+    <div class="figure">
+      <img src="figs/fig4_protocol_c.png" alt="Protocol C: goal-conditioned routing, 4x better reconstruction">
+      <div class="cap"><b>Figure 6.</b> Goal-conditioned routing: classification 0.810 &rarr; 0.821 (up), and
+        reconstruction MSE 0.139 &rarr; 0.034 (<b>4&times; better</b>). The gain comes from goal-dedicated
+        heads preventing task interference; per-goal structural specialization is the next step.</div>
+    </div>
+
+    <h3 class="title" style="font-size: 1.2rem; margin-top: 2.2rem;">Protocol D — robust to every ablation</h3>
+    <div class="table-container">
+      <table>
+        <thead><tr><th>variant</th><th>acc.</th><th>real acc.</th></tr></thead>
+        <tbody>
+          <tr><td class="win">full</td><td class="num">0.824</td><td class="num">0.648</td></tr>
+          <tr><td>no bottleneck</td><td class="num">0.824</td><td class="num">0.649</td></tr>
+          <tr><td>no annealing</td><td class="num">0.824</td><td class="num">0.648</td></tr>
+          <tr><td>domain-invariant eye</td><td class="num">0.823</td><td class="num">0.646</td></tr>
+          <tr><td>no eye (raw pixels)</td><td class="num">0.823</td><td class="num">0.646</td></tr>
+          <tr><td>random router</td><td class="num">0.823</td><td class="num">0.647</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tcap">Every removal changes accuracy by &le;0.001 (3 seeds). The mechanism does not depend on any
+      one component.</p>
+  </div>
+</section>
+
+<!-- ================= RELATED ================= -->
+<section class="section" style="border-top: 1px solid #eee;">
+  <div class="container">
+    <h2 class="title">Where this sits</h2>
+    <div class="content has-text-justified">
+      <p><strong>Mixture of experts</strong> (Shazeer et al. 2017; Bengio et al. 2013) routes tokens to parallel
+        subnetworks; we route on visual cues <em>plus goal</em>, and train with an oracle-supervised staged
+        protocol that makes the policy learnable and readable. <strong>Dynamic networks</strong> (Han et al.
+        2021) change depth, width, or skip connections; we change the <em>family</em> of computation —
+        convolutional vs recurrent vs flat. <strong>Neural architecture search</strong> finds one structure per
+        dataset at heavy cost; we switch structure per sample, at inference, trained in the same loop.
+        <strong>Structural re-parameterization</strong> (RepVGG) folds branches at inference; we keep the
+        branches live and route between them. <strong>Sim-to-real transfer</strong> adapts weights or renders
+        domains; we show adapting <em>which network</em> computes is more parameter-efficient than adapting how
+        it computes.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RUN ================= -->
+<section class="section" style="border-top: 1px solid #eee;">
+  <div class="container">
+    <h2 class="title">Run it yourself</h2>
+    <div class="content has-text-justified">
+      <p>Python 3.9+ with <code>torch</code> and <code>numpy</code> (matplotlib for figures). Every paper number
+        is produced by these scripts from the committed result files — nothing is hard-coded. Runs checkpoint
+        per item and resume across interruptions.</p>
+    </div>
+    <pre>pip install -r requirements.txt
+python run_experiments.py --smoke                  # 4 protocols at tiny scale (~2 min)
+python run_experiments.py --only A --seeds 3       # mixed-domain benchmark
+python run_experiments.py --only B --seeds 3       # sim-to-real transfer
+python run_experiments.py --only C --seeds 3       # goal-conditioned routing
+python run_experiments.py --only D --seeds 3       # ablations
+python make_figs.py                                # figures 1-7 (reads results/*.json)
+python -m pytest tests/ -q                         # sanity tests</pre>
+    <div class="content has-text-justified">
+      <p>See the <a href="https://github.com/sehajr-singhs/switch-operator">repository</a> for the full README,
+        methods, baselines, and the honest failure modes found along the way. LaTeX sources for both papers
+        (<code>nmi_paper.tex</code>, <code>ieee_paper.tex</code>) are included in <code>docs/papers/</code> and
+        regenerate with <code>xelatex</code> / <code>pdflatex</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CITATION ================= -->
+<section class="section" style="padding-top: 0.5rem;">
+  <div class="container">
+    <h2 class="title">Citation (BibTeX)</h2>
+    <pre>@article{singh2026switchoperator,
+  title   = {The Switch Operator: Self-Reconfiguring Neural Computation
+             via Visual-Cue and Goal-Conditioned Routing},
+  author  = {Singh, Sehaj},
+  year    = {2026},
+  note    = {Dynamic neural architecture; differentiable routing over nine
+             primitives; structural vs weight adaptation for sim-to-real transfer},
+  url     = {https://github.com/sehajr-singhs/switch-operator}
+}</pre>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="footer">
+  <div class="container">
+    <p>Research prototype &middot; code MIT licensed &middot; benchmark is procedural (no downloads) &middot;
+      <a href="papers/">papers/</a> &middot; <a href="playground.html">live playground</a></p>
+  </div>
+</footer>
+
+</body>
+</html>

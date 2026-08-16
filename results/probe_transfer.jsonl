@@ -1,0 +1,4 @@
+{"kind": "struct", "n_real": 20, "real": 0.338, "sim": 0.999, "params": 4659}
+{"kind": "struct", "n_real": 50, "real": 0.343, "sim": 0.999, "params": 4659}
+{"kind": "struct", "n_real": 100, "real": 0.343, "sim": 0.996, "params": 4659}
+{"kind": "struct", "n_real": 200, "real": 0.348, "sim": 0.994, "params": 4659}
