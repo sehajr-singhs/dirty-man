@@ -56,6 +56,26 @@ def _write_sources():
     sys.path.insert(0, os.getcwd())
 
 
+def _run(name, fn):
+    """Run one protocol; on failure write the full traceback to a file so the
+    kernel output is self-diagnosing (Kaggle's own log is not always
+    downloadable)."""
+    print("=" * 60, flush=True)
+    print(name, flush=True)
+    try:
+        fn()
+        print(f"[OK] {name}", flush=True)
+    except Exception:
+        import traceback
+        tb = traceback.format_exc()
+        print(tb, flush=True)
+        os.makedirs("results", exist_ok=True)
+        with open(os.path.join("results", "kernel_error.txt"), "w") as f:
+            f.write(f"{name}\\n{tb}")
+        print(f"[FAILED] {name} — traceback written to results/kernel_error.txt",
+              flush=True)
+
+
 if __name__ == "__main__":
     _write_sources()
     import torch
@@ -65,25 +85,20 @@ if __name__ == "__main__":
 
     import run_experiments as re
 
-    print("=" * 60, flush=True)
-    print("PROTOCOL A: one operator beats every fixed network", flush=True)
-    re.protocol_a(seeds=[0, 1, 2], epochs=12, n_train=6000, n_test=2000,
-                  smoke=False, batch=128)
+    _run("PROTOCOL A: one operator beats every fixed network",
+         lambda: re.protocol_a(seeds=[0, 1, 2], epochs=12, n_train=6000,
+                               n_test=2000, smoke=False, batch=128))
 
-    print("=" * 60, flush=True)
-    print("PROTOCOL C: goal-conditioned routing, per-goal oracle", flush=True)
-    re.protocol_c(seeds=[0, 1, 2], epochs=12, n_train=6000, n_test=2000,
-                  batch=128)
+    _run("PROTOCOL C: goal-conditioned routing, per-goal oracle",
+         lambda: re.protocol_c(seeds=[0, 1, 2], epochs=12, n_train=6000,
+                               n_test=2000, batch=128))
 
-    print("=" * 60, flush=True)
-    print("PROTOCOL E: real MNIST, zero synthetic overlap", flush=True)
-    re.protocol_e(seeds=[0, 1, 2], epochs=12, n_train=6000, n_test=2000,
-                  batch=128)
+    _run("PROTOCOL E: real MNIST, zero synthetic overlap",
+         lambda: re.protocol_e(seeds=[0, 1, 2], epochs=12, n_train=6000,
+                               n_test=2000, batch=128))
 
-    print("=" * 60, flush=True)
-    print("TRAINING-TIME INTERVENTION: energy conservation", flush=True)
-    import training_intervention
-    training_intervention.main()
+    _run("TRAINING-TIME INTERVENTION: energy conservation",
+         lambda: (__import__("training_intervention").main()))
 
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
