@@ -67,6 +67,7 @@ results/              committed result files (protocol_*.json, chk_*.json, banks
 docs/                 website (index.html, playground.html, figs/, papers/)
 docs/papers/          LaTeX sources + PDFs (nmi_paper.tex, ieee_paper.tex)
 kaggle/               Kaggle GPU kernel (runs protocols A, C, E + intervention on a GPU)
+                      → https://www.kaggle.com/code/sehajrsingh/dirty-man-headline-experiments
 tests/                sanity tests
 ```
 

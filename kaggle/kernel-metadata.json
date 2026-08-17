@@ -1,0 +1,16 @@
+{
+  "id": "sehajrsingh/dirty-man-headline-experiments",
+  "title": "Dirty Man headline experiments",
+  "code_file": "kernel_dirty_man_self_contained.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "machine_shape": "gpu_t4x2",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
