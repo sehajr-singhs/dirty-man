@@ -43,7 +43,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dirty_man.data_glyphs import make_datasets, save_playground_data
-from dirty_man.switch_operator import (IMG, PRIMITIVES, Standalone, SwitchOperator,
+from dirty_man.switch_operator import (IMG, LATENT, PRIMITIVES, Standalone, SwitchOperator,
                                        annealed_tau, set_seed)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -231,19 +231,39 @@ def train_phase(model, train_ds, epochs, seed, lr, task, domain_w, goals,
         tot, n = 0.0, 0
         for x, y, d, s, r in loader:
             hard = anneal and ep >= epochs - 2
-            if goals is not None:                      # multi-goal protocol C
+            if oracle_only and oracle is not None:
+                # routing-stack warm-up: learn the per-regime targets alone.
+                # Must run before the goals branch, else multi-goal warm-up
+                # never happens and the router collapses (the protocol-C bug).
+                loss = torch.zeros((), device=x.device)
+                if goals is not None:
+                    # multi-goal warm-up: both goals, each supervised against
+                    # its own oracle (this is what un-collapses the router)
+                    g0 = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
+                    out0, info = model(x, goal=g0, tau=tau, hard=hard)
+                    g1 = torch.ones(x.size(0), dtype=torch.long, device=x.device)
+                    out1, info1 = model(x, goal=g1, tau=tau, hard=hard)
+                    loss = (oracle_w * F.cross_entropy(info["logits"], oracle["cls"][r])
+                            + oracle_w * F.cross_entropy(info1["logits"], oracle["rec"][r]))
+                else:
+                    out, info = model(x, goal=None, tau=tau, hard=hard)
+                    loss = oracle_w * F.cross_entropy(info["logits"], oracle["cls"][r])
+            elif goals is not None:                      # multi-goal protocol C
                 # two passes, one per goal, so each goal's head and its
                 # routing see clean targets
                 g0 = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
                 out0, info = model(x, goal=g0, tau=tau, hard=hard)
                 g1 = torch.ones(x.size(0), dtype=torch.long, device=x.device)
-                out1, _ = model(x, goal=g1, tau=tau, hard=hard)
+                out1, info1 = model(x, goal=g1, tau=tau, hard=hard)
                 loss = (0.5 * F.cross_entropy(out0[:, :10], y)
                         + 0.5 * F.mse_loss(out1[:, :FLAT], x.reshape(x.size(0), -1)))
-            elif oracle_only and oracle is not None:
-                # routing-stack warm-up: learn the per-regime targets alone
-                loss = torch.zeros((), device=x.device)
-                out, info = model(x, goal=None, tau=tau, hard=hard)
+                # per-goal oracle supervision: the classify pass should route
+                # to the best *classifier* per regime; the reconstruct pass to
+                # the best *reconstructor*. This is what makes the goal
+                # pathway drive structure, not just heads.
+                if oracle is not None:
+                    loss = loss + oracle_w * F.cross_entropy(info["logits"], oracle["cls"][r])
+                    loss = loss + oracle_w * F.cross_entropy(info1["logits"], oracle["rec"][r])
             else:
                 out, info = model(x, goal=None, tau=tau, hard=hard)
                 if task == "rec":
@@ -263,7 +283,7 @@ def train_phase(model, train_ds, epochs, seed, lr, task, domain_w, goals,
             # (sim / spatial / statistical). The per-sample argmin is noise;
             # the regime-level argmin is a stable, learnable target.
             if oracle is not None and goals is None and task == "cls":
-                target = oracle[0][r]                # oracle[0]: (3,) best expert per regime
+                target = oracle["cls"][r]           # best expert per regime
                 loss = loss + oracle_w * F.cross_entropy(info["logits"], target)
             if domain_w > 0 and getattr(model, "with_domain_head", False):
                 loss = loss + domain_w * model.domain_loss(x, d)
@@ -322,20 +342,34 @@ def train_model(model, train_ds, epochs, seed, lr=1e-3, task="cls",
             h.load_state_dict(sd)
             h.eval()
             oracle_heads[pname] = h
+        rec_heads = {}
+        for pname, sd in bank.get("rec_heads", {}).items():
+            rh = nn.Linear(64, FLAT)
+            rh.load_state_dict(sd)
+            rh.eval()
+            rec_heads[pname] = rh
         model.eval()
         with torch.no_grad():
             x0, y0, _, _, r0 = next(iter(make_loader(train_ds, batch=1024)))
             n_reg = int(r0.max().item()) + 1
             ces_r = torch.zeros(n_reg, len(PRIMITIVES), device=x0.device)
+            mses_r = torch.zeros(n_reg, len(PRIMITIVES), device=x0.device)
             for i, nm in enumerate(PRIMITIVES):
-                ce = F.cross_entropy(oracle_heads[nm](model.primitives[nm](x0)),
-                                     y0, reduction="none")
+                z0 = model.primitives[nm](x0)
+                ce = F.cross_entropy(oracle_heads[nm](z0), y0, reduction="none")
+                if nm in rec_heads:
+                    mse = F.mse_loss(rec_heads[nm](z0), x0.reshape(x0.size(0), -1),
+                                     reduction="none").mean(-1)
+                else:
+                    mse = torch.zeros_like(ce)
                 for reg in range(n_reg):
                     m = r0 == reg
                     if m.sum() > 0:
                         ces_r[reg, i] = ce[m].mean()
-        best_per_regime = ces_r.argmin(-1)
-        oracle = (best_per_regime, None)
+                        mses_r[reg, i] = mse[m].mean()
+        # per-goal oracle: which expert is best per regime for each goal.
+        # cls = argmin CE (classification); rec = argmin MSE (reconstruction).
+        oracle = {"cls": ces_r.argmin(-1), "rec": mses_r.argmin(-1)}
         model.train()
 
     if not staged:
@@ -354,8 +388,8 @@ def train_model(model, train_ds, epochs, seed, lr=1e-3, task="cls",
         # sim/spatial/statistical split through the noisy task gradient and
         # never resolves it.
         n1 = 2                                    # shared-head warm-up
-        n2 = max(2, int(epochs * 0.2))            # routing-stack warm-up
-        n3 = max(3, int(epochs * 0.35))           # train the router
+        n2 = max(4, int(epochs * 0.3))            # routing-stack warm-up
+        n3 = max(3, int(epochs * 0.3))            # train the router
         n4 = max(3, epochs - n1 - n2 - n3)        # joint fine-tune
     else:
         n1 = max(2, int(epochs * 0.3))      # warm-start primitives
@@ -447,32 +481,68 @@ def get_bank(name, train_ds, epochs, seed, batch=128, subsets=None):
     corruption is *visibly* the wrong tool for a warped image, which is what
     makes routing learnable. Default: each expert trains on everything.
 
-    Returns {"prims": {name: state_dict}, "heads": {name: state_dict}}."""
+    Returns {"prims": {name: state_dict}, "heads": {name: state_dict},
+             "rec_heads": {name: state_dict}} — heads are per-primitive
+    classify judges, rec_heads per-primitive reconstruction judges."""
     if subsets is not None:
         tag = "_sp" + "".join(f"{k[:2]}{''.join(map(str, v))}" for k, v in sorted(subsets.items()))
     else:
         tag = ""
     bdir = os.path.join(OUT, f"bank_{name}_{VERSION}_e{epochs}_t{len(train_ds)}_s{seed}{tag}")
     os.makedirs(bdir, exist_ok=True)
-    prims, heads = {}, {}
+    prims, heads, rec_heads = {}, {}, {}
     for pname in PRIMITIVES:
-        pp, hp = os.path.join(bdir, f"{pname}_prim.pt"), os.path.join(bdir, f"{pname}_head.pt")
-        if os.path.exists(pp) and os.path.exists(hp):
+        pp = os.path.join(bdir, f"{pname}_prim.pt")
+        hp = os.path.join(bdir, f"{pname}_head.pt")
+        rp = os.path.join(bdir, f"{pname}_rechead.pt")
+        prim_ok = os.path.exists(pp) and os.path.exists(hp)
+        if prim_ok and os.path.exists(rp):
             prims[pname] = torch.load(pp, weights_only=True)
             heads[pname] = torch.load(hp, weights_only=True)
+            rec_heads[pname] = torch.load(rp, weights_only=True)
         else:
-            ds = train_ds
-            if subsets is not None and pname in subsets:
-                mask = torch.isin(train_ds.tensors[4].to("cpu"),
-                                  torch.tensor(subsets[pname]))
-                ds = TensorDataset(*[t[mask] for t in train_ds.tensors])
-            m = train_standalone(pname, ds, epochs, seed, batch)
-            torch.save(m.prim.state_dict(), pp)
-            torch.save(m.head.state_dict(), hp)
-            prims[pname] = m.prim.state_dict()
-            heads[pname] = m.head.state_dict()
-            print(f"  [bank {name}] trained {pname}", flush=True)
-    return {"prims": prims, "heads": heads}
+            if not prim_ok:
+                ds = train_ds
+                if subsets is not None and pname in subsets:
+                    mask = torch.isin(train_ds.tensors[4].to("cpu"),
+                                      torch.tensor(subsets[pname]))
+                    ds = TensorDataset(*[t[mask] for t in train_ds.tensors])
+                m = train_standalone(pname, ds, epochs, seed, batch)
+                torch.save(m.prim.state_dict(), pp)
+                torch.save(m.head.state_dict(), hp)
+                prims[pname] = m.prim.state_dict()
+                heads[pname] = m.head.state_dict()
+                print(f"  [bank {name}] trained {pname}", flush=True)
+            else:
+                # prim + head already cached; only the rec-head is missing
+                prims[pname] = torch.load(pp, weights_only=True)
+                heads[pname] = torch.load(hp, weights_only=True)
+                ds = train_ds
+                if subsets is not None and pname in subsets:
+                    mask = torch.isin(train_ds.tensors[4].to("cpu"),
+                                      torch.tensor(subsets[pname]))
+                    ds = TensorDataset(*[t[mask] for t in train_ds.tensors])
+            # reconstruction judge: freeze the primitive, fit a linear
+            # decoder from its latent to the image (MSE). Gives the router
+            # a per-goal oracle for the reconstruct goal.
+            prim = Standalone(pname, n_classes=10)
+            prim.to(DEVICE)
+            prim.prim.load_state_dict(prims[pname])
+            for p in prim.prim.parameters():
+                p.requires_grad = False
+            rec = nn.Linear(LATENT, FLAT).to(DEVICE)
+            opt = torch.optim.Adam(rec.parameters(), lr=1e-3)
+            dl = make_loader(ds, batch=256)
+            for _ in range(3):
+                prim.eval()
+                for x, y, d, s, r in dl:
+                    z = prim.prim(x)
+                    loss = nn.functional.mse_loss(rec(z), x.reshape(x.size(0), -1))
+                    opt.zero_grad(); loss.backward(); opt.step()
+            torch.save(rec.state_dict(), rp)
+            rec_heads[pname] = rec.state_dict()
+            print(f"  [bank {name}] rec-head {pname}", flush=True)
+    return {"prims": prims, "heads": heads, "rec_heads": rec_heads}
 
 
 def train_static(make, train_ds, epochs, seed, batch=128):
@@ -936,10 +1006,175 @@ def protocol_d(seeds, epochs, n_train, n_test, batch=128):
 
 
 # ---------------------------------------------------------------------------
+# Protocol E — real handwriting sim->real transfer (zero synthetic overlap)
+#
+# Protocol B's "real" domain is still synthetic (hand-tuned corruptions of the
+# same procedural renderer). Protocol E replaces it with the real thing:
+# MNIST handwritten digits, downloaded once, resized to 24x24. The operator
+# learns everything from synthetic glyphs (the toolbox bank + a router trained
+# on clean sim) and is then asked to read real handwriting it has never seen
+# in any form. The claim: the router's eye, trained only on synthetic spatial
+# corruption, has learned to *identify the feature* "this input needs a
+# spatial lens" — and that feature transfers to genuinely real data.
+# ---------------------------------------------------------------------------
+
+def protocol_e(seeds, epochs, n_train, n_test, n_real_finetune=200, batch=128):
+    print("=== Protocol E: real handwriting (MNIST) sim->real transfer ===")
+    from dirty_man.data_mnist import make_mnist_datasets
+    # Everything the system knows is synthetic: the toolbox bank is trained on
+    # mixed glyph sim+corruption, the router on clean sim glyphs only.
+    mixed_train, _ = make_datasets(n_train, n_test)
+    sim_train, _ = make_datasets(n_train, n_test, domain="sim")
+    _, real_test = make_mnist_datasets()            # 10k real handwritten digits
+    cfg = {"protocol": "E", "n_train": n_train, "n_test": n_test,
+           "n_real_finetune": n_real_finetune, "seeds": seeds,
+           "epochs": epochs, "batch": batch, "toolbox": "bank_A",
+           "real_domain": "MNIST (real handwriting)"}
+    per_seed = {}
+
+    def static_cnn():
+        return nn.Sequential(
+            nn.Conv2d(1, 16, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
+            nn.Conv2d(16, 32, 3, padding=1), nn.ReLU(), nn.MaxPool2d(2),
+            nn.Flatten(), nn.Linear(32 * 6 * 6, 10))
+
+    def static_mlp():
+        return nn.Sequential(
+            nn.Flatten(), nn.Linear(FLAT, 256), nn.ReLU(),
+            nn.Linear(256, 128), nn.ReLU(), nn.Linear(128, 10))
+
+    def oracle_heads_from(bank):
+        oh = {}
+        for pname, sd in bank["heads"].items():
+            h = nn.Linear(64, 10)
+            h.load_state_dict(sd)
+            h.eval()
+            oh[pname] = h.to(DEVICE)
+        return oh
+
+    for seed in seeds:
+        chk = load_chk("E", seed, epochs, n_train)
+        if chk is not None:
+            print(f"  [seed {seed}] cached, skipping")
+            per_seed[seed] = chk
+            continue
+        t_seed = time.time()
+        # toolbox bank: the mixed-world specialist set (shared cache with A/B)
+        bank = get_bank("A", mixed_train, epochs, seed, batch, subsets=SPECIALISTS)
+        oracle_h = oracle_heads_from(bank)
+
+        # static baselines: fixed topologies trained on clean sim glyphs only
+        cnn = train_static(static_cnn, sim_train, epochs, seed, batch)
+        mlp = train_static(static_mlp, sim_train, epochs, seed, batch)
+        r_cnn = eval_cls(cnn, real_test)
+        r_mlp = eval_cls(mlp, real_test)
+
+        # the operator: toolbox bank, routing stack trained on clean sim only
+        set_seed(seed + 777)
+        switch = SwitchOperator(n_classes=10)
+        train_model(switch, sim_train, epochs, seed + 777, tag="switch(sim)",
+                    verbose=False, batch=batch, bank=bank)
+        r_sw = eval_cls(switch, real_test)
+        base = {
+            "static_cnn": r_cnn["acc"],
+            "static_mlp": r_mlp["acc"],
+            "switch_zero_shot": r_sw["acc"],
+        }
+
+        # routing policy on real handwriting: which lens does the eye pick?
+        route_real = routing_stats(r_sw)["utilization"]
+
+        # --- tiny labeled real set: weight vs structure adaptation ---------
+        real_tr, _ = make_mnist_datasets(n_train=n_real_finetune * 2, n_test=100)
+        finetune_ds = TensorDataset(*[t[:n_real_finetune] for t in real_tr.tensors])
+
+        # weight adaptation: unfreeze every weight of the static CNN
+        cnn2 = train_static(static_cnn, sim_train, epochs, seed + 1, batch)
+        opt2 = torch.optim.Adam(cnn2.parameters(), lr=5e-4)
+        for _ in range(3):
+            cnn2.train()
+            for x, y, d, s, r in make_loader(finetune_ds, batch=64):
+                loss = nn.functional.cross_entropy(cnn2(x), y)
+                opt2.zero_grad(); loss.backward(); opt2.step()
+        r_w = eval_cls(cnn2, real_test)
+
+        # structure adaptation: freeze tools AND the eye; adapt only the
+        # router + task head (4.7k params) with oracle supervision
+        sw2 = SwitchOperator(n_classes=10).to(DEVICE)
+        sw2.load_state_dict(switch.state_dict())
+        for p in sw2.primitives.parameters():
+            p.requires_grad = False
+        for p in sw2.eye.parameters():
+            p.requires_grad = False
+        opt3 = torch.optim.Adam([p for p in sw2.parameters() if p.requires_grad],
+                                lr=5e-4)
+        for _ in range(6):
+            sw2.train()
+            for x, y, d, s, r in make_loader(finetune_ds, batch=min(64, n_real_finetune)):
+                out, info = sw2(x, tau=0.5, hard=False)
+                loss = nn.functional.cross_entropy(out, y)
+                with torch.no_grad():
+                    ce = torch.zeros(len(PRIMITIVES), x.size(0), device=x.device)
+                    for i, nm in enumerate(PRIMITIVES):
+                        prim = Standalone(nm, n_classes=10).to(DEVICE)
+                        prim.prim.load_state_dict(bank["prims"][nm])
+                        prim.eval()
+                        ce[i] = F.cross_entropy(oracle_h[nm](prim.prim(x)), y,
+                                                reduction="none")
+                    tgt = ce.argmin(0)
+                loss = loss + 0.7 * F.cross_entropy(info["logits"], tgt)
+                opt3.zero_grad(); loss.backward(); opt3.step()
+        r_s = eval_cls(sw2, real_test)
+
+        n_w = sum(p.numel() for p in cnn2.parameters())
+        n_s = sum(p.numel() for p in sw2.parameters() if p.requires_grad)
+        per_seed[seed] = {
+            "static_cnn": base["static_cnn"],
+            "static_mlp": base["static_mlp"],
+            "switch_zero_shot": base["switch_zero_shot"],
+            "route_real": route_real,
+            "weight_adapted": {"acc_real": r_w["acc"], "adapted_params": n_w},
+            "structure_adapted": {"acc_real": r_s["acc"], "adapted_params": n_s},
+        }
+        save_chk("E", seed, epochs, n_train, per_seed[seed])
+        print(f"  [seed {seed}] switch zs={base['switch_zero_shot']:.3f} "
+              f"cnn={base['static_cnn']:.3f} mlp={base['static_mlp']:.3f} | "
+              f"weight-adapt={r_w['acc']:.3f} struct-adapt={r_s['acc']:.3f} "
+              f"({time.time() - t_seed:.0f}s)", flush=True)
+
+    # ---- merge across seeds ----------------------------------------------
+    def mean(key, sub=None):
+        vals = [per_seed[s][key] if sub is None else per_seed[s][key][sub]
+                for s in seeds]
+        return round(sum(vals) / len(vals), 4)
+
+    results = dict(cfg)
+    results["mean"] = {
+        "static_cnn": mean("static_cnn"),
+        "static_mlp": mean("static_mlp"),
+        "switch_zero_shot": mean("switch_zero_shot"),
+        "weight_adapted": {"acc_real": mean("weight_adapted", "acc_real"),
+                           "adapted_params": mean("weight_adapted", "adapted_params")},
+        "structure_adapted": {"acc_real": mean("structure_adapted", "acc_real"),
+                              "adapted_params": mean("structure_adapted", "adapted_params")},
+        "route_real": {name: round(sum(per_seed[s]["route_real"][name]
+                                       for s in seeds) / len(seeds), 3)
+                        for name in PRIMITIVES},
+    }
+    print(f"  mean: switch zs={results['mean']['switch_zero_shot']:.3f} "
+          f"cnn={results['mean']['static_cnn']:.3f} mlp={results['mean']['static_mlp']:.3f} | "
+          f"struct-adapt={results['mean']['structure_adapted']['acc_real']:.3f} "
+          f"vs weight-adapt={results['mean']['weight_adapted']['acc_real']:.3f}")
+    print(f"  routing on real handwriting: {results['mean']['route_real']}")
+    save("protocol_e.json", results)
+    return results
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", default="ABCD", help="protocols to run")
+    ap.add_argument("--only", default="ABCDE", help="protocols to run")
     ap.add_argument("--seeds", type=int, default=3, help="number of seeds")
     ap.add_argument("--seed-start", type=int, default=0)
     ap.add_argument("--epochs", type=int, default=12)
@@ -971,6 +1206,8 @@ def main():
         protocol_c(seeds, **kw)
     if "D" in args.only:
         protocol_d(seeds, **kw)
+    if "E" in args.only:
+        protocol_e(seeds, **kw)
     print(f"done in {time.time() - t0:.0f}s")
 
 

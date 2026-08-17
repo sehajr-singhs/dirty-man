@@ -1,0 +1,24 @@
+{
+  "static_cnn": 0.3225,
+  "static_mlp": 0.3065,
+  "switch_zero_shot": 0.2694,
+  "route_real": {
+    "linear": 0.0,
+    "dense": 1.0,
+    "relu": 0.0,
+    "cnn": 0.0,
+    "rnn": 0.0,
+    "lstm": 0.0,
+    "gan": 0.0,
+    "autoencoder": 0.0,
+    "transformer": 0.0
+  },
+  "weight_adapted": {
+    "acc_real": 0.4207,
+    "adapted_params": 16330
+  },
+  "structure_adapted": {
+    "acc_real": 0.3096,
+    "adapted_params": 4659
+  }
+}

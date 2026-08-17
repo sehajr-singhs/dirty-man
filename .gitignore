@@ -12,3 +12,6 @@ __pycache__/
 
 # regenerable model checkpoints (run run_experiments.py to rebuild)
 results/bank_*
+
+# downloaded datasets (MNIST is fetched on demand by dirty_man/data_mnist.py)
+data/

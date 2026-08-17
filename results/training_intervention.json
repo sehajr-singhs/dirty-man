@@ -1,0 +1,26 @@
+{
+  "experiment": "training_time_intervention",
+  "seed": 0,
+  "n_train": 4000,
+  "n_test": 1000,
+  "per_step_energy_violation_gL": {
+    "vanilla": 0.4217,
+    "vanilla_high_kinetic": 0.7956,
+    "vanilla_low_kinetic": 0.0478,
+    "physics_expert": 0.0,
+    "assistant_routed": 0.0256,
+    "assistant_high_kinetic": 0.0153,
+    "assistant_low_kinetic": 0.0359
+  },
+  "rollout_drift_gL_200steps": {
+    "vanilla": 0.9726,
+    "physics_expert": 0.0068,
+    "assistant_routed": 0.5473
+  },
+  "policy": {
+    "p_intervene_high_kinetic": 0.883,
+    "p_intervene_low_kinetic": 0.074,
+    "intervention_rate": 0.478
+  },
+  "oracle_fraction_intervene": 0.5
+}

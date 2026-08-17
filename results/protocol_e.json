@@ -1,0 +1,39 @@
+{
+  "protocol": "E",
+  "n_train": 6000,
+  "n_test": 2000,
+  "n_real_finetune": 200,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "epochs": 12,
+  "batch": 128,
+  "toolbox": "bank_A",
+  "real_domain": "MNIST (real handwriting)",
+  "mean": {
+    "static_cnn": 0.3126,
+    "static_mlp": 0.3123,
+    "switch_zero_shot": 0.3342,
+    "weight_adapted": {
+      "acc_real": 0.432,
+      "adapted_params": 16330.0
+    },
+    "structure_adapted": {
+      "acc_real": 0.4326,
+      "adapted_params": 4659.0
+    },
+    "route_real": {
+      "linear": 0.0,
+      "dense": 0.333,
+      "relu": 0.0,
+      "cnn": 0.667,
+      "rnn": 0.0,
+      "lstm": 0.0,
+      "gan": 0.0,
+      "autoencoder": 0.0,
+      "transformer": 0.0
+    }
+  }
+}

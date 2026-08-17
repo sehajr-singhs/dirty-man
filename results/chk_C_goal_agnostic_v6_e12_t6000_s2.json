@@ -1,10 +1,10 @@
 {
-  "acc_cls": 0.7905,
-  "mse_rec": 0.1374,
+  "acc_cls": 0.8185,
+  "mse_rec": 0.1477,
   "route_classify": {
     "linear": 0.0,
-    "dense": 1.0,
-    "relu": 0.0,
+    "dense": 0.0,
+    "relu": 1.0,
     "cnn": 0.0,
     "rnn": 0.0,
     "lstm": 0.0,
@@ -14,8 +14,8 @@
   },
   "route_reconstruct": {
     "linear": 0.0,
-    "dense": 1.0,
-    "relu": 0.0,
+    "dense": 0.0,
+    "relu": 1.0,
     "cnn": 0.0,
     "rnn": 0.0,
     "lstm": 0.0,

@@ -1,6 +1,6 @@
 {
-  "acc_cls": 0.8255,
-  "mse_rec": 0.0337,
+  "acc_cls": 0.819,
+  "mse_rec": 0.0205,
   "route_classify": {
     "linear": 0.0,
     "dense": 0.0,
@@ -13,11 +13,11 @@
     "transformer": 0.0
   },
   "route_reconstruct": {
-    "linear": 0.0,
+    "linear": 0.973,
     "dense": 0.0,
-    "relu": 1.0,
+    "relu": 0.0,
     "cnn": 0.0,
-    "rnn": 0.0,
+    "rnn": 0.027,
     "lstm": 0.0,
     "gan": 0.0,
     "autoencoder": 0.0,

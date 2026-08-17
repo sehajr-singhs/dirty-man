@@ -11,8 +11,8 @@
   "batch": 128,
   "models": {
     "goal_conditioned": {
-      "acc_cls": 0.8213,
-      "mse_rec": 0.0342,
+      "acc_cls": 0.8212,
+      "mse_rec": 0.0204,
       "route_by_goal": {
         "classify": {
           "linear": 0.0,
@@ -26,11 +26,11 @@
           "transformer": 0.0
         },
         "reconstruct": {
-          "linear": 0.0,
+          "linear": 0.956,
           "dense": 0.0,
-          "relu": 1.0,
+          "relu": 0.0,
           "cnn": 0.0,
-          "rnn": 0.0,
+          "rnn": 0.044,
           "lstm": 0.0,
           "gan": 0.0,
           "autoencoder": 0.0,
@@ -39,13 +39,13 @@
       }
     },
     "goal_agnostic": {
-      "acc_cls": 0.8102,
-      "mse_rec": 0.1385,
+      "acc_cls": 0.8172,
+      "mse_rec": 0.1432,
       "route_by_goal": {
         "classify": {
           "linear": 0.0,
-          "dense": 0.333,
-          "relu": 0.667,
+          "dense": 0.172,
+          "relu": 0.828,
           "cnn": 0.0,
           "rnn": 0.0,
           "lstm": 0.0,
@@ -55,8 +55,8 @@
         },
         "reconstruct": {
           "linear": 0.0,
-          "dense": 0.333,
-          "relu": 0.667,
+          "dense": 0.172,
+          "relu": 0.828,
           "cnn": 0.0,
           "rnn": 0.0,
           "lstm": 0.0,
