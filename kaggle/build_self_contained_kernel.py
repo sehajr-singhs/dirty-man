@@ -19,11 +19,13 @@ FILES = [
     "dirty_man/data_mnist.py",
     "run_experiments.py",
     "training_intervention.py",
+    "flagship_regime_routing.py",
 ]
 
 BOILERPLATE_HEAD = '''"""The Dirty Man — headline experiments, self-contained (Kaggle GPU).
 
-Runs the three headline protocols plus the training-time intervention:
+Runs the three headline protocols plus the training-time intervention and the
+flagship:
 
   A  Mixed-domain: one Switch Operator beats every fixed network it contains.
   C  Goal pathway (FIXED): per-goal oracle supervision — the router genuinely
@@ -33,6 +35,9 @@ Runs the three headline protocols plus the training-time intervention:
      zero-shot to real MNIST digits (0.334 > static CNN 0.313 > MLP 0.312).
   Intervention: the operator detects a learner's energy-conservation failure
      regime and routes to a Hamiltonian physics expert (16x less violation).
+  FLAGSHIP: a regime-switching pendulum where no single network obeys all
+     laws but routing between exact physics harnesses does (up to 190x lower
+     energy error).
 
 This kernel is self-contained: all source files are embedded below, written
 to disk, then executed. Expected wall time on a Kaggle GPU: ~30-60 min.
@@ -100,10 +105,13 @@ if __name__ == "__main__":
     _run("TRAINING-TIME INTERVENTION: energy conservation",
          lambda: (__import__("training_intervention").main()))
 
+    _run("FLAGSHIP: no single network obeys all laws; routing does",
+         lambda: (__import__("flagship_regime_routing").main()))
+
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
     for f in ["protocol_a.json", "protocol_c.json", "protocol_e.json",
-              "training_intervention.json"]:
+              "training_intervention.json", "flagship_regime_routing.json"]:
         p = os.path.join("results", f)
         if os.path.exists(p):
             print(f"  {p}  ({os.path.getsize(p)} bytes)", flush=True)
