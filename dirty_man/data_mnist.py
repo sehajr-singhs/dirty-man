@@ -28,6 +28,7 @@ glyphs.
 from __future__ import annotations
 
 import os
+import time
 
 import numpy as np
 import torch
@@ -39,12 +40,25 @@ REAL_SEVERITY = 0.5
 
 
 def _load_mnist(root: str, train: bool) -> tuple[np.ndarray, np.ndarray]:
-    """Download (once) and return MNIST as raw numpy arrays."""
+    """Download (once) and return MNIST as raw numpy arrays.
+
+    The download is retried with exponential backoff: sandboxed runners
+    (Kaggle, CI) often fail the first S3 lookup with a transient DNS error
+    (`Temporary failure in name resolution`) even when internet is enabled.
+    """
     from torchvision import datasets
-    ds = datasets.MNIST(root=root, train=train, download=True)
-    x = ds.data.numpy().astype(np.float32)          # (N, 28, 28) in [0, 255]
-    y = ds.targets.numpy().astype(np.int64)
-    return x, y
+    last: Exception | None = None
+    for attempt in range(5):
+        try:
+            ds = datasets.MNIST(root=root, train=train, download=True)
+            x = ds.data.numpy().astype(np.float32)  # (N, 28, 28) in [0, 255]
+            y = ds.targets.numpy().astype(np.int64)
+            return x, y
+        except Exception as exc:                     # noqa: BLE001 - retry any dl failure
+            last = exc
+            if attempt < 4:
+                time.sleep(2 ** attempt)
+    raise RuntimeError(f"MNIST download failed after 5 attempts: {last}")
 
 
 def _resize(x: np.ndarray, size: int = SIZE) -> np.ndarray:
