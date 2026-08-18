@@ -1,0 +1,39 @@
+{
+  "experiment": "flagship_regime_routing",
+  "claim": "no single network fits all regimes; routing does",
+  "seed": 0,
+  "window": 16,
+  "rollout_steps": 60,
+  "per_regime": {
+    "conservative": {
+      "conservative_expert": 0.0,
+      "damped_expert": 3.1959,
+      "driven_expert": 1.8766,
+      "static_best": 6.3643,
+      "switch": 0.1554,
+      "static_energy_err": 0.3021,
+      "switch_energy_err": 0.0016,
+      "router_accuracy": 0.98
+    },
+    "damped": {
+      "conservative_expert": 3.7084,
+      "damped_expert": 0.0,
+      "driven_expert": 1.9909,
+      "static_best": 3.506,
+      "switch": 0.4317,
+      "static_energy_err": 0.3947,
+      "switch_energy_err": 0.0164,
+      "router_accuracy": 0.973
+    },
+    "driven": {
+      "conservative_expert": 2.0648,
+      "damped_expert": 1.6353,
+      "driven_expert": 0.0,
+      "static_best": 2.7539,
+      "switch": 0.0551,
+      "static_energy_err": 0.2339,
+      "switch_energy_err": 0.0181,
+      "router_accuracy": 0.967
+    }
+  }
+}

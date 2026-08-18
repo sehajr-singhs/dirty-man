@@ -61,7 +61,8 @@ Our contribution is not a new primitive; it is a mechanism for \emph{structural 
   \item \textbf{Sim-to-real transfer.} Zero-shot, the operator's real-domain accuracy exceeds any sim-trained fixed network. With 200 real labels, adapting only the \emph{router} (structure adaptation, 4.7k parameters) beats adapting all weights (16.3k parameters) while preserving sim performance 30$\times$ better (Sec.~\ref{sec:protocolB}).
   \item \textbf{Goal-conditioned computation.} Feeding the task into the routing decision --- supervised by a per-goal oracle --- yields a 7$\times$ better reconstruction objective with zero classification cost, and the router \emph{specializes per goal}: classify$\to$ReLU, reconstruct$\to$linear (Sec.~\ref{sec:protocolC}).
   \item \textbf{Real data, zero synthetic overlap.} Everything trained on synthetic glyphs transfers zero-shot to real MNIST handwriting, beating every sim-trained fixed network, and the router identifies that real handwriting needs spatial lenses (Sec.~\ref{sec:protocolE}).
-  \item \textbf{Theory.} Three theorems: oracle-supervised routing learns the regime policy, structural adaptation needs asymptotically fewer labels than weight adaptation, and the shared bottleneck keeps switching geometry-continuous (Sec.~\ref{sec:theory}).
+  \item \textbf{Theory.} Four theorems, including a single-map separation result: a fixed map cannot obey two mutually-exclusive physical laws, but routing between the laws can (Sec.~\ref{sec:theory}).
+  \item \textbf{The flagship: routing does what no static net can.} On a regime-switching pendulum, every fixed expert fails on at least one law, a single brute-force MLP fails on all of them, and the routed system is near-optimal on all --- with 13--190$\times$ lower energy error (Sec.~\ref{sec:flagship}).
   \item \textbf{Training-time intervention.} The operator as a training assistant: it detects a learner's failure regime (high-energy pendulum orbits) and routes those samples to a physics-conserving expert, cutting energy violation 16$\times$ (Sec.~\ref{sec:intervention}).
   \item \textbf{Robustness.} Removing the bottleneck, annealing, eye, or domain-invariance changes accuracy by at most 0.001 (Sec.~\ref{sec:protocolD}).
 \end{itemize}
@@ -279,6 +280,71 @@ Table~\ref{tab:protD} shows the ablations. Removing the bottleneck, annealing, e
   \end{tabular}
 \end{table}
 
+\subsection{The flagship: a single map cannot obey two laws}
+\label{sec:flagship}
+
+All of the above asks routing to be \emph{better} than the best fixed network.
+The flagship asks for more: a setting where \emph{no single network can
+succeed at all}, and only routing can. A pendulum obeys three different
+physical laws in three regimes --- conservative (energy conserved), damped
+(energy decays), and driven (energy pumped by a periodic torque). Each law
+demands a mutually-exclusive inductive bias: a map that conserves energy
+cannot simultaneously dissipate it, because the two laws prescribe different
+energy changes for the same state (Theorem~\ref{thm:separation}).
+
+We build the inverted-design system the paper advocates: three experts, each
+the \emph{exact, closed-form} physical law hardcoded as a harness with no free
+parameters; one static MLP trained on all three regimes jointly (the
+brute-force baseline); and a router whose eye watches a 16-step trajectory and
+learns --- with oracle supervision --- to detect which law is governing (energy
+flat vs.\ decaying vs.\ pumped). Table~\ref{tab:flagship} reports 60-step rollout
+error; Table~\ref{tab:flagshipE} reports energy-profile error, the physically
+meaningful quantity.
+
+Every single expert is exact on its own regime (0.000) and wrong elsewhere
+(1.6--3.7). The static MLP fails on \emph{every} regime (2.8--6.4): with one
+inductive bias it cannot both conserve and dissipate. The routed system, by
+contrast, is near-optimal on all three regimes (0.06--0.43), and its
+energy-profile error is \textbf{13--190$\times$ lower} than the static network
+(0.002--0.018 vs.\ 0.23--0.40). The router identifies the governing law at
+97--98\% accuracy. This is the separation the theory predicts: the single-map
+violation is bounded below by half the per-step energy gap $\tfrac12 b L^2
+\omega^2 \Delta t$, while routing drives it toward zero as the router improves
+(Corollary~\ref{cor:separation}).
+
+\begin{table}[t]
+  \centering
+  \caption{Flagship --- 60-step rollout state error (mean squared $\theta,\omega$;
+  150 trajectories, seed 0). Each column is a fixed model; SWITCH routes each
+trajectory once from its opening 16-step window.}
+  \label{tab:flagship}
+  \begin{tabular}{lccccc}
+    \toprule
+    regime & cons. & damped & driven & static MLP & SWITCH \\
+    \midrule
+    conservative & \textbf{0.000} & 3.196 & 1.877 & 6.364 & 0.155 \\
+    damped       & 3.708 & \textbf{0.000} & 1.991 & 3.506 & 0.432 \\
+    driven       & 2.065 & 1.635 & \textbf{0.000} & 2.754 & 0.055 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{Flagship --- energy-profile error (mean $|E_{\text{pred}}-E_{\text{true}}|$
+in units of $gL$ over the rollout). Lower = obeys the true law.}
+  \label{tab:flagshipE}
+  \begin{tabular}{lcc}
+    \toprule
+    regime & static MLP & SWITCH \\
+    \midrule
+    conservative & 0.302 & \textbf{0.002} \\
+    damped       & 0.395 & \textbf{0.016} \\
+    driven       & 0.234 & \textbf{0.018} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \section{Theory}
 \label{sec:theory}
 
@@ -458,6 +524,62 @@ why the operator trains stably across regime switches, and why the annealed
 soft-to-hard schedule can commit at deployment without a head re-adaptation
 step.
 
+\subsection{A single map cannot obey two laws}
+\label{sec:separation}
+
+The flagship experiment (Sec.~\ref{sec:flagship}) turns on a sharper claim than
+``routing is a bit better than the best static net'': a single fixed map
+\emph{cannot} obey two mutually-exclusive physical laws, while routing can.
+Let $\mathcal{S}$ be a state space with energy $E:\mathcal{S}\to\mathbb{R}$, and
+let $F_c, F_d:\mathcal{S}\to\mathcal{S}$ be a conservative flow (energy-preserving)
+and a dissipative flow, i.e.
+\[
+  \Delta_c(s) := E(F_c(s))-E(s) = 0,
+  \qquad
+  \Delta_d(s) := E(F_d(s))-E(s) = -d(s),\quad d(s)>0\ \text{on}\ \mathcal{X}\subseteq\mathcal{S} .
+\]
+
+\begin{theorem}[Single-map separation]
+\label{thm:separation}
+For every single map $f:\mathcal{S}\to\mathcal{S}$ and every $s\in\mathcal{X}$,
+writing $\Delta_f(s)=E(f(s))-E(s)$,
+\[
+  \max\big(\,|\Delta_f(s)|,\; |\Delta_f(s)+d(s)|\,\big)
+  \;\geq\; \tfrac{1}{2}\,d(s).
+\]
+Thus any single map mis-represents the energy law by at least
+$\tfrac12\inf_{s\in\mathcal{X}} d(s)$ somewhere in $\mathcal{X}$, regardless of
+its capacity.
+\end{theorem}
+
+\begin{proof}
+For a scalar $a=\Delta_f(s)$ and $d>0$, the triangle inequality gives
+$|a|+|a+d|\ge|a-(a+d)|=d$, hence $\max(|a|,|a+d|)\ge d/2$.
+\end{proof}
+
+The two terms are exactly the violations of the two laws: $|\Delta_f(s)|$ is
+how far $f$'s energy change is from conservation, and $|\Delta_f(s)+d(s)|$ is
+how far it is from the dissipative law. For the damped pendulum the gap is
+$d(s) = b L^2 \omega^2 \Delta t + O(\Delta t^2)$ (energy dissipated per step), so
+the bound is proportional to the damping $b$: stronger physical laws force a
+larger separation.
+
+\begin{corollary}[Routing escapes the bound]
+\label{cor:separation}
+A routed map $g(s)=F_{k(s)}(s)$ that selects the correct expert satisfies
+$\Delta_g(s)=0$ on conservative states and $\Delta_g(s)=-d(s)$ on dissipative
+states --- zero violation on all of $\mathcal{X}$. If the router mis-assigns a
+fraction $\alpha$ of states, the expected energy-law violation is at most
+$\alpha\sup_{s\in\mathcal{X}}d(s)$, which vanishes as $\alpha\to0$, whereas the
+single-map bound $\tfrac12\inf_{s\in\mathcal{X}}d(s)$ does not.
+\end{corollary}
+
+\begin{proof}
+A correctly routed state uses the exact law, so its violation is zero; a
+mis-routed state is wrong by at most the maximum energy gap $\sup d(s)$, giving
+expected violation $\le\alpha\sup d(s)$.
+\end{proof}
+
 \subsection{Protocol E: real handwriting, zero synthetic overlap}
 \label{sec:protocolE}
 
@@ -538,7 +660,7 @@ handles the input. Full results in
 \section{Conclusion}
 \label{sec:conclusion}
 
-We introduced the Dirty Man, a self-reconfiguring neural architecture whose core component, the Switch Operator, rewires which network computes each sample, driven by what it sees and what it wants. One operator beats every fixed network it contains; its router learns a readable structural policy; it transfers zero-shot to genuinely real data and adapts with 3.5$\times$ fewer parameters than weight fine-tuning; it serves multiple goals with 7$\times$ better reconstruction and a per-goal structure; and it can act as a training assistant that detects and repairs a learner's failure regime. We proved the mechanism: oracle-supervised routing learns the regime policy, structural adaptation needs fewer labels, and the shared bottleneck keeps switching geometry-continuous. Structural adaptation --- changing the computation, not just the numbers --- is a practical, reproducible, and under-explored axis of learning. The code, figures, and results are committed and fully reproducible.
+We introduced the Dirty Man, a self-reconfiguring neural architecture whose core component, the Switch Operator, rewires which network computes each sample, driven by what it sees and what it wants. One operator beats every fixed network it contains; its router learns a readable structural policy; it transfers zero-shot to genuinely real data and adapts with 3.5$\times$ fewer parameters than weight fine-tuning; it serves multiple goals with 7$\times$ better reconstruction and a per-goal structure; and it can act as a training assistant that detects and repairs a learner's failure regime. Most decisively, the flagship experiment shows a setting where no single network can succeed at all: a regime-switching pendulum whose governing law changes per trajectory, where only routing between the exact physical laws --- inverted design --- obeys every law at once. We proved the mechanism: oracle-supervised routing learns the regime policy, structural adaptation needs fewer labels, the shared bottleneck keeps switching geometry-continuous, and a single map provably cannot obey two mutually-exclusive laws while routing can. Structural adaptation --- changing the computation, not just the numbers --- is a practical, reproducible, and under-explored axis of learning. The code, figures, and results are committed and fully reproducible.
 
 \section*{Methods summary}
 \label{sec:methods}

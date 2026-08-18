@@ -351,6 +351,56 @@ def fig7_glyphs() -> None:
     print("wrote fig7_glyphs.png")
 
 
+def fig8_flagship() -> None:
+    d = load("flagship_regime_routing.json")
+    rows = d["per_regime"]
+    regimes = list(rows.keys())
+    short = {"conservative": "cons.", "damped": "damped", "driven": "driven"}
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.4, 3.8), gridspec_kw={"width_ratios": [1.5, 1]})
+
+    # Panel 1: rollout state error, every fixed model vs switch
+    models = [("conservative_expert", "cons. expert", MUTED),
+              ("damped_expert", "damped expert", MUTED),
+              ("driven_expert", "driven expert", MUTED),
+              ("static_best", "static MLP (brute force)", LOSE),
+              ("switch", "SWITCH", WIN)]
+    x = np.arange(len(regimes))
+    width = 0.16
+    for i, (key, label, color) in enumerate(models):
+        vals = [rows[r][key] for r in regimes]
+        ax.bar(x + (i - 2) * width, vals, width, color=color, label=label,
+               edgecolor="white", linewidth=0.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels(regimes, fontsize=9)
+    ax.set_ylabel("60-step rollout state error")
+    ax.set_title("Every fixed model fails somewhere; the switch does not", fontsize=10, color=INK)
+    ax.legend(frameon=False, fontsize=7.4, ncol=2, loc="upper left")
+    ax.spines[["top", "right"]].set_visible(False)
+    for r in regimes:
+        ax.annotate("", (x[regimes.index(r)] + 0.5, 0.5), xytext=(x[regimes.index(r)], 0.5),
+                    color="#ffffff", alpha=0.0)
+
+    # Panel 2: energy-profile error, static vs switch (log scale for the gap)
+    stat = [rows[r]["static_energy_err"] for r in regimes]
+    sw = [rows[r]["switch_energy_err"] for r in regimes]
+    y = np.arange(len(regimes))[::-1]
+    ax2.barh(y + 0.2, stat, 0.4, color=LOSE, label="static MLP", edgecolor="white")
+    ax2.barh(y - 0.2, sw, 0.4, color=WIN, label="SWITCH", edgecolor="white")
+    for yi, (a, b) in zip(y, zip(stat, sw)):
+        ax2.text(a + 0.015, yi + 0.2, f"{a:.3f}", va="center", fontsize=7.5, color=LOSE)
+        ax2.text(max(b, 0.001) * 1.6, yi - 0.2, f"{b:.3f}", va="center", fontsize=7.5, color=WIN)
+    ax2.set_yticks(y)
+    ax2.set_yticklabels(regimes, fontsize=9)
+    ax2.set_xscale("log")
+    ax2.set_xlabel("energy-profile error (gL, log)")
+    ax2.set_title("energy law obeyed: up to 190\u00d7 lower error", fontsize=10, color=INK)
+    ax2.legend(frameon=False, fontsize=7.5, loc="lower right")
+    ax2.spines[["top", "right"]].set_visible(False)
+
+    save(fig, "fig8_flagship.png")
+
+
 if __name__ == "__main__":
     style()
     fig1_architecture()
@@ -360,4 +410,5 @@ if __name__ == "__main__":
     fig5_protocol_d()
     fig6_routing()
     fig7_glyphs()
+    fig8_flagship()
     print("all figures written to figs/ and docs/figs/")

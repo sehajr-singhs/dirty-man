@@ -142,7 +142,7 @@ Mixture-of-experts \cite{switchtransformer,condcomp} routes tokens to parallel e
 The Switch Operator shows that structural adaptation --- changing which network computes, per input, per goal --- is learnable, interpretable, transferable, and more parameter-efficient than weight adaptation under domain shift. Code, figures, and all numbers are committed and reproducible.
 
 \section*{Code and reproducibility}
-\url{https://github.com/sehajr-singhs/switch-operator} --- every number is read from committed JSON result files by \texttt{make\_figs.py}; the benchmark is procedural (no downloads); \texttt{--device cuda} forces GPU execution and \texttt{run\_experiments.py --smoke} verifies the pipeline in ~1 minute.
+\url{https://github.com/sehajr-singhs/dirty-man} --- every number is read from committed JSON result files by \texttt{make\_figs.py}; the benchmark is procedural (no downloads); \texttt{--device cuda} forces GPU execution and \texttt{run\_experiments.py --smoke} verifies the pipeline in ~1 minute.
 
 \begin{thebibliography}{9}
 \bibitem{switchtransformer} N.~Shazeer \emph{et al.}, ``Outrageously large neural networks: The sparsely-gated mixture-of-experts layer,'' \emph{ICLR}, 2017.
