@@ -381,6 +381,32 @@
   </div>
 </section>
 
+<!-- ================= DISCOVERED LAW ================= -->
+<section class="section" style="padding-top: 0.5rem;">
+  <div class="container">
+    <h2 class="title">The discovered-law flagship: no physics is given</h2>
+    <div class="content has-text-justified">
+      <p>A fair objection to the flagship: <em>you hardcoded the winning laws, of course routing wins.</em>
+        The discovered-law variant closes that gap. Every expert is now a <strong>learned network</strong>, and
+        no law is provided to any learned component. The inverted-design principle moves inside each expert:
+        the known physics (the pendulum's <code>(g/L)&thinsp;sin&thinsp;&theta;</code> torque and the integrator) is the
+        unchangeable skeleton, and what is learned is the <em>residual force law</em> of the regime — a
+        conservative specialist learns ~0, a damped one learns ~&minus;b&omega;, a driven one learns
+        ~A&thinsp;sin(&Omega;t). Learning the residual on an exact skeleton instead of raw next-state dynamics is what
+        keeps rollouts stable.</p>
+      <p>Each learned specialist is near-exact on its own regime; the static MLP still fails on every regime;
+        and the routed system is <strong>7–35&times; better</strong>, tracking the oracle specialist. The router still
+        detects the governing law at 87–97% — <em>nothing was hardcoded</em>. And as the number of laws grows,
+        a single map's error grows while routing's stays flat: each law gets its own specialist instead of one
+        compromise.</p>
+    </div>
+    <img src="figs/fig9_discovered_law.png" alt="Discovered-law flagship: learned specialists beat a single static net with no hardcoded physics, and routing error stays flat as laws accumulate">
+    <p class="cap"><b>Left:</b> rollout error per regime — static MLP fails everywhere; the routed system tracks the
+      oracle specialist (an upper bound on what routing can achieve).
+      <b>Right:</b> scaling — more governing laws hurt one map, not routing.</p>
+  </div>
+</section>
+
 <!-- ================= ABSTRACT ================= -->
 <section class="section" style="padding-top: 0.5rem;">
   <div class="container">

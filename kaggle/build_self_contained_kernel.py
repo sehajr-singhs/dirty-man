@@ -20,6 +20,7 @@ FILES = [
     "run_experiments.py",
     "training_intervention.py",
     "flagship_regime_routing.py",
+    "flagship_discovered_law.py",
 ]
 
 BOILERPLATE_HEAD = '''"""The Dirty Man — headline experiments, self-contained (Kaggle GPU).
@@ -108,10 +109,15 @@ if __name__ == "__main__":
     _run("FLAGSHIP: no single network obeys all laws; routing does",
          lambda: (__import__("flagship_regime_routing").main()))
 
+    _run("FLAGSHIP 2 (discovered law): learned specialists, no hardcoded physics",
+         lambda: (__import__("flagship_discovered_law").main(
+             n_traj=400, epochs=800, n_test=200, test_steps=100)))
+
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
     for f in ["protocol_a.json", "protocol_c.json", "protocol_e.json",
-              "training_intervention.json", "flagship_regime_routing.json"]:
+              "training_intervention.json", "flagship_regime_routing.json",
+              "flagship_discovered_law.json"]:
         p = os.path.join("results", f)
         if os.path.exists(p):
             print(f"  {p}  ({os.path.getsize(p)} bytes)", flush=True)

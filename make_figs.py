@@ -401,6 +401,62 @@ def fig8_flagship() -> None:
     save(fig, "fig8_flagship.png")
 
 
+def fig9_discovered_law() -> None:
+    """Discovered-law flagship: learned specialists (no hardcoded physics),
+    and the scaling curve (error vs number of laws)."""
+    try:
+        d = load("flagship_discovered_law.json")
+    except FileNotFoundError:
+        print("skip fig9: no flagship_discovered_law.json yet")
+        return
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.4, 3.8), gridspec_kw={"width_ratios": [1.4, 1]})
+
+    # Panel 1: static vs switch vs oracle-specialist per regime
+    rows = d["per_regime"]
+    regimes = list(rows.keys())
+    x = np.arange(len(regimes))
+    width = 0.26
+    stat = [rows[r]["static_best"] for r in regimes]
+    sw = [rows[r]["switch"] for r in regimes]
+    ospec = [rows[r]["oracle_specialist"] for r in regimes]
+    ax.bar(x - width, stat, width, color=LOSE, label="static MLP", edgecolor="white")
+    ax.bar(x, sw, width, color=WIN, label="SWITCH", edgecolor="white")
+    ax.bar(x + width, ospec, width, color=MUTED, label="oracle specialist", edgecolor="white", alpha=0.85)
+    for xi, (a, b, c) in zip(x, zip(stat, sw, ospec)):
+        ax.text(xi - width, a + 0.01, f"{a:.2f}", ha="center", fontsize=7.5, color=LOSE)
+        ax.text(xi, b + 0.01, f"{b:.2f}", ha="center", fontsize=7.5, color=WIN)
+        ax.text(xi + width, c + 0.01, f"{c:.2f}", ha="center", fontsize=7.5, color=MUTED)
+    ax.set_xticks(x)
+    ax.set_xticklabels(regimes, fontsize=9)
+    ax.set_ylabel("rollout state error")
+    ax.set_title("learned specialists: no physics hardcoded", fontsize=10, color=INK)
+    ax.legend(frameon=False, fontsize=7.5, ncol=3, loc="upper left")
+    ax.spines[["top", "right"]].set_visible(False)
+
+    # Panel 2: scaling curve — error vs number of laws
+    scaling = d.get("scaling", {})
+    ks = sorted(int(k) for k in scaling)
+    if ks:
+        stat_sc = [scaling[str(k)]["static_avg_err"] for k in ks]
+        sw_sc = [scaling[str(k)]["switch_avg_err"] for k in ks]
+        ax2.plot(ks, stat_sc, "-o", color=LOSE, label="static MLP", lw=1.8)
+        ax2.plot(ks, sw_sc, "-o", color=WIN, label="SWITCH", lw=1.8)
+        for k, (a, b) in zip(ks, zip(stat_sc, sw_sc)):
+            ax2.annotate(f"{a:.2f}", (k, a), textcoords="offset points", xytext=(0, 6),
+                         ha="center", fontsize=7.5, color=LOSE)
+            ax2.annotate(f"{b:.2f}", (k, b), textcoords="offset points", xytext=(0, -12),
+                         ha="center", fontsize=7.5, color=WIN)
+        ax2.set_xlabel("number of governing laws")
+        ax2.set_ylabel("mean rollout error")
+        ax2.set_title("more laws hurt one map, not routing", fontsize=10, color=INK)
+        ax2.legend(frameon=False, fontsize=7.5)
+        ax2.spines[["top", "right"]].set_visible(False)
+        ax2.set_xticks(ks)
+
+    save(fig, "fig9_discovered_law.png")
+
+
 if __name__ == "__main__":
     style()
     fig1_architecture()
@@ -411,4 +467,5 @@ if __name__ == "__main__":
     fig6_routing()
     fig7_glyphs()
     fig8_flagship()
+    fig9_discovered_law()
     print("all figures written to figs/ and docs/figs/")

@@ -24,7 +24,9 @@ input ──► primitive_2 ────────┴──► bottleneck ─�
 
 **The flagship — routing does what no single network can.** A pendulum obeys three different laws in three regimes: conservative (energy conserved), damped (energy decays), driven (energy pumped). Each law demands a mutually-exclusive inductive bias. The system embeds each law as an *exact, closed-form physics harness* (inverted design), and a router learns — from a 16-step trajectory — to detect which law governs (energy flat vs decaying vs pumped) at **97–98% accuracy**. Every fixed expert is exact on its own regime (0.000) and wrong elsewhere (1.6–3.7); a single brute-force MLP fails on *every* regime (2.8–6.4); the routed system is near-optimal on all three, with **up to 190× lower energy error** (0.002–0.018 vs 0.23–0.40). See `flagship_regime_routing.py`.
 
-The router's policy is interpretable: on clean sim it uses dense (flat lens) and cnn; as corruption grows it abandons dense and shifts to relu/cnn (spatial lenses). On real handwritten digits it routes to cnn/dense — it has learned to identify which lens the input needs. The NMI paper (`docs/papers/nmi_paper.tex`) includes a theory section with four theorems: oracle-supervised routing learns the regime policy (VC-dimension bound), structural adaptation needs fewer labels than weight adaptation (sample-complexity bound), the shared bottleneck keeps switching geometry-continuous, and a **single-map separation bound** — a fixed map must mis-represent at least one law by half the per-step energy gap, while routing drives the gap to zero.
+**The discovered-law flagship — no physics is given.** A fair objection to the flagship above is that the laws were hardcoded. The discovered-law variant (`flagship_discovered_law.py`) closes that gap: every expert is a *learned* network, and no law is provided to any learned component. The inverted-design principle moves inside each expert — the known pendulum skeleton is the unchangeable harness, and each specialist learns only the *residual force law* of its regime (~0, ~−bω, ~A sin Ωt). Learning the residual on an exact skeleton (instead of raw next-state dynamics) is what keeps rollouts stable. Learned specialists are near-exact on their own regime; the static MLP still fails on every regime; the routed system is **7–35× better**, tracking the oracle specialist, with the router discovering the law at 87–97%. And as the number of governing laws grows (2→3→4), a single map's error grows while routing's stays flat — each law gets its own specialist instead of one compromise.
+
+The router's policy is interpretable: on clean sim it uses dense (flat lens) and cnn; as corruption grows it abandons dense and shifts to relu/cnn (spatial lenses). On real handwritten digits it routes to cnn/dense — it has learned to identify which lens the input needs. The NMI paper (`docs/papers/nmi_paper.tex`) includes a theory section with five theorems: oracle-supervised routing learns the regime policy (VC-dimension bound), structural adaptation needs fewer labels than weight adaptation (sample-complexity bound), the shared bottleneck keeps switching geometry-continuous, a **single-map separation bound** — a fixed map must mis-represent at least one law by half the per-step energy gap, while routing drives the gap to zero — and a **scaling bound** — a single map's error is bounded below by a constant independent of the number of laws, while routing's error decays with router accuracy, so more laws hurt one map, not routing.
 
 ## Getting started
 
@@ -47,6 +49,9 @@ python training_intervention.py
 # THE FLAGSHIP: regime-switching pendulum — no single network, routing does
 python flagship_regime_routing.py
 
+# DISCOVERED-LAW FLAGSHIP: learned specialists, no hardcoded physics
+python flagship_discovered_law.py
+
 # Figures + interactive playground (read committed results/*.json)
 python make_figs.py
 python make_playground.py
@@ -66,6 +71,7 @@ dirty_man/            core package
   data_mnist.py       real MNIST handwritten digits (downloaded once) in the standard schema
 training_intervention.py  the Dirty Man as a training assistant: detects a learner's failure regime and intervenes
 flagship_regime_routing.py  THE FLAGSHIP: a single map cannot obey two laws; routing can (inverted design)
+flagship_discovered_law.py  DISCOVERED-LAW FLAGSHIP: learned specialists, no hardcoded physics + scaling curve
 run_experiments.py    protocols A–E, staged training, checkpoint/resume, result JSONs
 make_figs.py          figures 1–8 from results/*.json (nothing hard-coded)
 make_playground.py    docs/playground.html from results/playground.json
@@ -96,7 +102,7 @@ Digits 0–9 are rendered procedurally as anti-aliased parametric strokes in 24�
 - The real-data test is single-digit grayscale (MNIST); real video and natural-image domains are the essential next test.
 - The per-goal oracle needs per-primitive reconstruction heads; a cheaper oracle would broaden applicability.
 - The training-time intervention is a proof of concept on pendulum dynamics; scaling it to real training loops is future work.
-- The flagship's physics experts are hardcoded closed-form laws (the inverted-design premise); the *learned* pieces are the router (which law) and the brute-force baseline (which fails). Learning the unknown regimes as well — rather than supplying them as known laws — is the direct next step.
+- The discovered-law flagship replaces hardcoded experts with learned specialists on exact physics skeletons; the remaining simplification is that the *skeleton* itself (the known (g/L) sin θ torque) is still supplied. Learning the skeleton from data — full discovery of both law and structure — is the direct next step.
 - The staged training protocol and temperature schedule are delicate; hyperparameters were tuned for this benchmark.
 
 ## Papers
