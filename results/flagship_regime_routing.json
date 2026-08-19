@@ -1,39 +1,40 @@
 {
   "experiment": "flagship_regime_routing",
   "claim": "no single network fits all regimes; routing does",
+  "produced_on": "T4 GPU (Kaggle kernel v6 / Lightning job dirty-man-flagship-gpu2)",
   "seed": 0,
   "window": 16,
-  "rollout_steps": 60,
+  "rollout_steps": 100,
   "per_regime": {
     "conservative": {
       "conservative_expert": 0.0,
-      "damped_expert": 3.1959,
-      "driven_expert": 1.8766,
-      "static_best": 6.3643,
-      "switch": 0.1554,
-      "static_energy_err": 0.3021,
-      "switch_energy_err": 0.0016,
+      "damped_expert": 7.259,
+      "driven_expert": 4.189,
+      "static_best": 12.443,
+      "switch": 0.007,
+      "static_energy_err": 0.3364,
+      "switch_energy_err": 0.0005,
       "router_accuracy": 0.98
     },
     "damped": {
-      "conservative_expert": 3.7084,
+      "conservative_expert": 8.444,
       "damped_expert": 0.0,
-      "driven_expert": 1.9909,
-      "static_best": 3.506,
-      "switch": 0.4317,
-      "static_energy_err": 0.3947,
-      "switch_energy_err": 0.0164,
-      "router_accuracy": 0.973
+      "driven_expert": 4.334,
+      "static_best": 7.778,
+      "switch": 1.558,
+      "static_energy_err": 0.5491,
+      "switch_energy_err": 0.0923,
+      "router_accuracy": 0.92
     },
     "driven": {
-      "conservative_expert": 2.0648,
-      "damped_expert": 1.6353,
+      "conservative_expert": 3.827,
+      "damped_expert": 3.492,
       "driven_expert": 0.0,
-      "static_best": 2.7539,
-      "switch": 0.0551,
-      "static_energy_err": 0.2339,
-      "switch_energy_err": 0.0181,
-      "router_accuracy": 0.967
+      "static_best": 6.567,
+      "switch": 0.056,
+      "static_energy_err": 0.2972,
+      "switch_energy_err": 0.0105,
+      "router_accuracy": 0.99
     }
   }
 }

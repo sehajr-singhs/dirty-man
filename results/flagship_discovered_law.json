@@ -1,0 +1,51 @@
+{
+  "experiment": "flagship_discovered_law",
+  "claim": "even with no hardcoded physics, a single map cannot obey mutually-exclusive laws; learned specialists + a router that discovers the law can",
+  "produced_on": "T4 GPU (Lightning job dirty-man-flagship-gpu2)",
+  "seed": 0,
+  "window": 16,
+  "rollout_steps": 100,
+  "per_regime": {
+    "conservative": {
+      "static_best": 2.887,
+      "switch": 0.004,
+      "oracle_specialist": 0.001,
+      "static_energy_err": 0.1664,
+      "switch_energy_err": 0.0012,
+      "router_accuracy": 0.98
+    },
+    "damped": {
+      "static_best": 2.798,
+      "switch": 0.808,
+      "oracle_specialist": 0.022,
+      "static_energy_err": 0.5124,
+      "switch_energy_err": 0.0632,
+      "router_accuracy": 0.93
+    },
+    "driven": {
+      "static_best": 0.961,
+      "switch": 0.193,
+      "oracle_specialist": 0.147,
+      "static_energy_err": 0.08,
+      "switch_energy_err": 0.0318,
+      "router_accuracy": 0.99
+    }
+  },
+  "scaling": {
+    "2": {
+      "n_regimes": 2,
+      "static_avg_err": 2.458,
+      "switch_avg_err": 0.268
+    },
+    "3": {
+      "n_regimes": 3,
+      "static_avg_err": 2.024,
+      "switch_avg_err": 0.554
+    },
+    "4": {
+      "n_regimes": 4,
+      "static_avg_err": 2.26,
+      "switch_avg_err": 0.456
+    }
+  }
+}

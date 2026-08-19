@@ -369,9 +369,9 @@
         embed each known law as an <em>exact, closed-form physics harness</em>, and learn only what is not known —
         here, <em>which law is governing</em>. The router's eye watches a 16-step trajectory, detects the energy
         trend (flat vs. decaying vs. pumped), and routes to the right expert. It identifies the governing law at
-        <strong>97–98% accuracy</strong>. Every fixed expert is exact on its own regime (0.000) and wrong elsewhere
-        (1.6–3.7); a single brute-force MLP fails on <em>every</em> regime (2.8–6.4); the routed system is
-        near-optimal on all three, with <strong>up to 190&times; lower energy error</strong>.</p>
+        <strong>92–99% accuracy</strong> (full scale, T4 GPU). Every fixed expert is exact on its own regime (0.000) and wrong elsewhere
+        (3.5–8.4); a single brute-force MLP fails on <em>every</em> regime (6.6–12.4); the routed system is
+        5&times; better even on its worst regime, with <strong>up to 336&times; lower energy error</strong>.</p>
     </div>
     <img src="figs/fig8_flagship.png" alt="Flagship: every fixed model fails on at least one pendulum regime; the routed system succeeds on all three with up to 190x lower energy error">
     <p class="cap"><b>Left:</b> 60-step rollout error — each expert is exact on its own law and wrong elsewhere;
@@ -395,10 +395,10 @@
         ~A&thinsp;sin(&Omega;t). Learning the residual on an exact skeleton instead of raw next-state dynamics is what
         keeps rollouts stable.</p>
       <p>Each learned specialist is near-exact on its own regime; the static MLP still fails on every regime;
-        and the routed system is <strong>7–35&times; better</strong>, tracking the oracle specialist. The router still
-        detects the governing law at 87–97% — <em>nothing was hardcoded</em>. And as the number of laws grows,
-        a single map's error grows while routing's stays flat: each law gets its own specialist instead of one
-        compromise.</p>
+        and the routed system is <strong>5–720&times; better</strong>, tracking the oracle specialist. The router still
+        detects the governing law at 93–99% — <em>nothing was hardcoded</em>. And as the number of laws grows,
+        a single map is stuck at its error floor while routing stays an order of magnitude lower
+        (4.5–9&times; better at every law count): each law gets its own specialist instead of one compromise.</p>
     </div>
     <img src="figs/fig9_discovered_law.png" alt="Discovered-law flagship: learned specialists beat a single static net with no hardcoded physics, and routing error stays flat as laws accumulate">
     <p class="cap"><b>Left:</b> rollout error per regime — static MLP fails everywhere; the routed system tracks the

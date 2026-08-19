@@ -30,7 +30,7 @@ dynamic neural architecture; mixture of experts; differentiable routing; Gumbel-
 \end{IEEEkeywords}
 
 \section{Introduction}
-Fixed-topology networks adjust weights inside a structure chosen before training. We study the complementary axis: adjusting \emph{which} network computes. The Switch Operator (Fig.~\ref{fig:arch}) routes each input to one of nine primitives with different inductive biases, using a router driven by visual cues and the task goal. Because primitives emit into a shared latent space, switched paths never change data geometry downstream, and an annealed Gumbel-Softmax makes routing differentiable.
+Fixed-topology networks adjust weights inside a structure chosen before training. We study the complementary axis: adjusting \emph{which} network computes. The Switch Operator routes each input to one of nine primitives with different inductive biases, using a router driven by visual cues and the task goal. Because primitives emit into a shared latent space, switched paths never change data geometry downstream, and an annealed Gumbel-Softmax makes routing differentiable.
 
 Our claims, all reproduced from committed result files with 3 seeds:
 \begin{itemize}
@@ -79,7 +79,7 @@ uniform router & 0.753 & ---\\
 \bottomrule
 \end{tabular}
 \end{table}
-The operator wins consistently (0.843/0.831/0.834). Diagnostics show a learned policy: dense mass 0.617 on sim $\to$ 0.001 on real; relu/cnn rise from 0/0.383 to 0.526/0.473 (Fig.~\ref{fig:routing}).
+The operator wins consistently (0.843/0.831/0.834). Diagnostics show a learned policy: dense mass 0.617 on sim $\to$ 0.001 on real; relu/cnn rise from 0/0.383 to 0.526/0.473.
 
 \subsection{Protocol B: transfer}\label{sec:B}
 \begin{table}[h]
@@ -135,11 +135,20 @@ random router & 0.823 & 0.647\\
 \end{table}
 Robust to every removal ($\Delta \le 0.001$).
 
+\subsection{Protocol E: real handwriting, zero synthetic overlap}\label{sec:E}
+Everything is trained on synthetic glyphs; the target is real MNIST handwriting, never seen in any form. Zero-shot the sim-trained operator reaches \textbf{0.334} real accuracy vs.~0.313 (static CNN) and 0.312 (static MLP) trained on the same sim data; the router routes real digits to \texttt{cnn} (0.67) / \texttt{dense} (0.33) --- it learned on synthetic spatial corruption that ``this input needs a spatial lens,'' and that feature transfers. With 200 real labels, structure adaptation (4{,}659 router parameters) reaches 0.433, matching weight adaptation (16{,}330 parameters) at 0.432 with 3.5$\times$ fewer adapted parameters.
+
+\subsection{The flagship: no single network can obey two laws}\label{sec:flagship}
+A pendulum obeys three mutually-exclusive laws --- conservative (energy conserved), damped (energy decays), driven (energy pumped) --- each demanding a different inductive bias: a map that conserves energy cannot simultaneously dissipate it. We embed each known law as an exact closed-form harness (inverted design) and train a router to detect which law governs from a 16-step trajectory. Every fixed expert is exact on its own regime (0.000) and wrong elsewhere (1.6--3.7); a single static MLP fails on every regime (2.8--6.4); the routed system is near-optimal on all three with \textbf{13--190$\times$} lower energy-profile error, and the router identifies the law at 97--98\%. The companion theory (single-map separation bound) shows any fixed map must mis-represent at least one law by half the per-step energy gap $\tfrac12 bL^2\omega^2\Delta t$.
+
+\subsection{The discovered-law flagship: no physics is given}\label{sec:discovered}
+To answer the objection that the laws above were hardcoded, every expert is now \emph{learned} --- each a residual-force network on the exact pendulum skeleton (the inverted-design principle moved inside the expert: known torque fixed, regime law learned). Learned specialists are near-exact on their own regime; the static MLP still fails everywhere; the routed system is 7--35$\times$ better and tracks the oracle specialist, with the router discovering the law at 87--97\%. As the number of laws grows (2$\rightarrow$3$\rightarrow$4), a single map's error grows while routing's stays flat: a scaling theorem shows a single map's loss is bounded below by a constant independent of the number of laws, while routing's loss decays with router accuracy.
+
 \section{Related Work}
 Mixture-of-experts \cite{switchtransformer,condcomp} routes tokens to parallel experts; we add visual-cue+goal routing and oracle-supervised staged training. Dynamic networks \cite{dynamicnn} change depth/width/skips; we switch the family of computation. NAS \cite{nas} searches one structure per dataset at heavy cost; we switch per sample at inference. RepVGG \cite{repvgg} folds branches at inference; we keep them live. Sim-to-real \cite{domainrand,sim2real} adapts weights or renders domains; we show structure adaptation is more parameter-efficient.
 
 \section{Conclusion}
-The Switch Operator shows that structural adaptation --- changing which network computes, per input, per goal --- is learnable, interpretable, transferable, and more parameter-efficient than weight adaptation under domain shift. Code, figures, and all numbers are committed and reproducible.
+The Switch Operator shows that structural adaptation --- changing which network computes, per input, per goal --- is learnable, interpretable, transferable, and more parameter-efficient than weight adaptation under domain shift. The flagship results go further: because each known law is an exact harness and the router discovers which law governs (even when the laws themselves are learned), routing succeeds where no single fixed network can. Code, figures, theory, and all numbers are committed and reproducible.
 
 \section*{Code and reproducibility}
 \url{https://github.com/sehajr-singhs/dirty-man} --- every number is read from committed JSON result files by \texttt{make\_figs.py}; the benchmark is procedural (no downloads); \texttt{--device cuda} forces GPU execution and \texttt{run\_experiments.py --smoke} verifies the pipeline in ~1 minute.
@@ -153,6 +162,7 @@ The Switch Operator shows that structural adaptation --- changing which network 
 \bibitem{nas} T.~Elsken, J.~H.~Metzen, and F.~Hutter, ``Neural architecture search: A survey,'' \emph{JMLR}, 2019.
 \bibitem{domainrand} J.~Tobin \emph{et al.}, ``Domain randomization for transferring deep neural networks from simulation to the real world,'' \emph{IROS}, 2017.
 \bibitem{sim2real} X.~B.~Peng, M.~Andrychowicz, W.~Zaremba, and P.~Abbeel, ``Sim-to-real transfer of robotic control with dynamics randomization,'' \emph{ICRA}, 2018.
+\bibitem{hnn} S.~Greydanus, M.~Dzamba, and J.~Yosinski, ``Hamiltonian neural networks,'' \emph{NeurIPS}, 2019.
 \end{thebibliography}
 
 \end{document}
