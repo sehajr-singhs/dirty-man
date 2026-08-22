@@ -11,11 +11,11 @@ depth 3 a ReLU projection — and different inputs take different paths.
 
 Measured on SVHN (real street-view digit photographs; genuinely real-world
 data, no synthetic overlap):
-  - the per-sample program beats every static path it contains;
-  - it beats a coarse whole-network switch (MoE-style) at a fraction of the
-    parameters;
-  - the per-depth choices are readable: different digit classes systematically
-    pick different lenses — the "identify the feature, pick the lens" thesis.
+  - the per-sample program is evaluated against every fixed path it contains;
+  - the comparison reports the best fixed path and a coarse whole-network
+    switch (MoE-style), rather than assuming routing must win;
+  - the per-depth choices are inspectable: digit classes pick different
+    downstream lenses — the "identify the feature, pick the lens" thesis.
 
 Run modes (each writes its own partial JSON, then combine them):
     python nonstatic_layers.py --model static --epochs 8

@@ -1,6 +1,6 @@
 {
   "id": "sehajrsingh/dirty-man-headline-experiments",
-  "title": "Dirty Man headline experiments",
+  "title": "Dirty Man: matched-budget non-static routing on real robot telemetry",
   "code_file": "kernel_dirty_man_self_contained.py",
   "language": "python",
   "kernel_type": "script",
@@ -9,7 +9,7 @@
   "enable_tpu": "false",
   "enable_internet": "true",
   "machine_shape": "gpu_t4x2",
-  "dataset_sources": [],
+  "dataset_sources": ["tuntrnanh1222/sarcos"],
   "competition_sources": [],
   "kernel_sources": [],
   "model_sources": []

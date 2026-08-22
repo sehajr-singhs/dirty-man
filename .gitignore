@@ -17,3 +17,4 @@ results/bank_*
 data/
 data_svhn/
 data_fm/
+data_sarcos/

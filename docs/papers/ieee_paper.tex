@@ -22,7 +22,7 @@
 \maketitle
 
 \begin{abstract}
-We present the Dirty Man, a neural architecture whose core component --- the Switch Operator --- reconfigures its computation per input: a visual-cue ``eye'' and a goal pathway drive a differentiable router that selects among nine neural primitives (linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer), all emitting into a shared latent space. All experiments run on CUDA automatically when a GPU is available. Staged training --- warm-start primitives, oracle-supervised router training, joint fine-tune, annealed Gumbel commitment --- prevents mixture collapse and yields a readable routing policy. On a procedural sim-to-real glyph benchmark (24$\times$24, 3 seeds): (i) one operator reaches 0.834 accuracy, above every fixed network (best static 0.829, best standalone 0.822, static CNN 0.789); (ii) zero-shot real transfer 0.474 vs.\ 0.388 for a sim-trained static CNN, cutting the transfer gap from 0.611 to 0.526; (iii) with 200 real labels, structure adaptation (4{,}659 parameters) reaches 0.475 real / 0.9997 sim vs.\ weight adaptation (16{,}330 parameters) at 0.395 / 0.984; (iv) goal-conditioned routing yields 4.1$\times$ better reconstruction (0.034 vs.\ 0.139 MSE) with no classification loss; (v) ablations of bottleneck, annealing, eye, and domain-invariance change accuracy by $\le$0.001. Structural adaptation is more parameter-efficient than weight adaptation under domain shift.
+We present the Dirty Man, a neural architecture whose core component --- the Switch Operator --- reconfigures its computation per input: a visual-cue ``eye'' and a goal pathway drive a differentiable router that selects among nine neural primitives (linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, transformer), all emitting into a shared latent space. All experiments run on CUDA automatically when a GPU is available. Staged training --- warm-start primitives, oracle-supervised router training, joint fine-tune, annealed Gumbel commitment --- prevents mixture collapse and yields a readable routing policy. On a procedural sim-to-real glyph benchmark (24$\times$24, 3 seeds): (i) one operator reaches 0.834 accuracy, above every fixed network (best static 0.829, best standalone 0.822, static CNN 0.789); (ii) zero-shot real transfer 0.474 vs.\ 0.388 for a sim-trained static CNN, cutting the transfer gap from 0.611 to 0.526; (iii) with 200 real labels, structure adaptation (4{,}659 parameters) reaches 0.475 real / 0.9997 sim vs.\ weight adaptation (16{,}330 parameters) at 0.395 / 0.984; (iv) goal-conditioned routing yields 7.1$\times$ better reconstruction (0.020 vs.\ 0.143 MSE) with no classification loss and specializes by goal; (v) on SARCOS real 7-DOF robot-arm telemetry, per-depth routing reaches 0.0185 versus 0.0198 for the reported fixed-path pilot; (vi) ablations of bottleneck, annealing, eye, and domain-invariance change accuracy by $\le$0.001. Structural adaptation is more parameter-efficient than weight adaptation under domain shift, while routing is not universally beneficial on homogeneous data.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -36,7 +36,8 @@ Our claims, all reproduced from committed result files with 3 seeds:
 \begin{itemize}
 \item \textbf{Mixed-domain learning} (Sec.~\ref{sec:A}): one operator beats every fixed network it contains, learning a policy that shifts flat lenses $\rightarrow$ spatial/piecewise lenses as corruption grows.
 \item \textbf{Transfer} (Sec.~\ref{sec:B}): structure adaptation (router only) beats weight adaptation (all weights) with 200 real labels, at 3.5$\times$ fewer adapted parameters and without forgetting the source domain.
-\item \textbf{Multi-goal} (Sec.~\ref{sec:C}): goal-conditioned routing improves reconstruction 4.1$\times$ with zero classification cost.
+\item \textbf{Multi-goal} (Sec.~\ref{sec:C}): per-goal oracle supervision improves reconstruction 7.1$\times$ with no classification loss and produces different goal-conditioned routes.
+\item \textbf{Real robot dynamics} (Sec.~\ref{sec:nonstatic}): per-depth routing on SARCOS telemetry yields a measurable pilot gain and an interpretable speed-conditioned policy; SVHN supplies the negative homogeneous-data control.
 \item \textbf{Robustness} (Sec.~\ref{sec:D}): every ablation changes accuracy by $\le$0.001.
 \end{itemize}
 
@@ -102,18 +103,18 @@ Structure adaptation wins the target domain at 3.5$\times$ fewer adapted paramet
 \subsection{Protocol C: goal pathway}\label{sec:C}
 \begin{table}[h]
 \centering
-\caption{Goal-conditioned vs.\ agnostic (3 seeds).}
+\caption{Goal-conditioned vs.\ agnostic with per-goal oracle supervision (3 seeds).}
 \label{tab:c}
 \begin{tabular}{lcc}
 \toprule
 Model & Cls acc & Recon MSE\\
 \midrule
-goal-agnostic & 0.810 & 0.139\\
-\textbf{goal-conditioned} & \textbf{0.821} & \textbf{0.034}\\
+goal-agnostic & 0.817 & 0.143\\
+\textbf{goal-conditioned} & \textbf{0.821} & \textbf{0.020}\\
 \bottomrule
 \end{tabular}
 \end{table}
-Reconstruction improves 4.1$\times$; classification +1.1pt. The router converges to a single lens per goal; per-goal specialization is future work.
+Reconstruction improves 7.1$\times$; classification improves by 0.4 points. Per-goal oracle supervision produces distinct routes: classification selects ReLU, whereas reconstruction selects mostly linear (with a small recurrent share). This is a route-level effect, not merely separate task heads.
 
 \subsection{Protocol D: ablations}\label{sec:D}
 \begin{table}[h]
@@ -145,9 +146,9 @@ A pendulum obeys three mutually-exclusive laws --- conservative (energy conserve
 To answer the objection that the laws above were hardcoded, every expert is now \emph{learned} --- each a residual-force network on the exact pendulum skeleton (the inverted-design principle moved inside the expert: known torque fixed, regime law learned). Learned specialists are near-exact on their own regime; the static MLP still fails everywhere; the routed system is 5--720$\times$ better and tracks the oracle specialist, with the router discovering the law at 93--99\% (full scale, T4 GPU). As the number of laws grows (2$\rightarrow$3$\rightarrow$4), a single map is stuck at its error floor while routing stays an order of magnitude lower (4.5--9$\times$ better at every law count): a scaling theorem shows a single map's loss is bounded below by a constant independent of the number of laws, while routing's loss decays with router accuracy.
 
 \subsection{Non-static computation: per-sample programs, not per-sample networks}\label{sec:nonstatic}
-The flagship routes between \emph{whole networks}, but switching whole networks is mixture-of-experts --- a known design. The sharper claim is routing \emph{inside} the network: at every depth a router selects the primitive \emph{layer} that processes the current representation of that sample. The architecture is then not a fixed stack of layers but a per-sample program of computation: each input walks its own path ($4\cdot4\cdot3=48$ paths in the 3-depth bank). Because the output head is linear, the routed output is \emph{exactly} a convex combination of the static-path outputs, with weights the product of the per-depth gate probabilities (Program-Hull theorem): the routed hypothesis class contains the convex hull of the static paths, so it can never do worse than the best fixed path in hindsight, and strictly improves whenever different inputs demand different programs.
+The flagship routes between \emph{whole networks}, but switching whole networks is mixture-of-experts --- a known design. The sharper claim is routing \emph{inside} the network: at every depth a router selects the primitive \emph{layer} that processes the current representation of that sample. The architecture is then not a fixed stack of layers but a per-sample program of computation: each input walks its own path ($4\cdot4\cdot3=48$ paths in the 3-depth bank). The hard-routed hypothesis class contains every fixed path and all feature-conditional selections among those paths (Program-expressivity theorem). The finite-temperature soft gates used for optimization do not inherit a convex-hull guarantee when intermediate operations are nonlinear, so we do not claim that learned routing must beat the best static path.
 
-We measure this on \textbf{SVHN} --- 73{,}257 real street-view photographs of house numbers, a real-world domain with zero overlap with the glyph renderer --- and on \textbf{SARCOS}, 44{,}484 real telemetry records of a 7-DOF robot arm (inverse dynamics: joint positions/velocities/accelerations to torques). On both, the routed program (268k params) matches or beats the best fixed path through the same op bank and beats a whole-network MoE switch (765k params) at roughly a third of the parameters. On SARCOS the lens choices are interpretable: the router picks the linear lens on slow, near-static configurations and nonlinear lenses on fast ones --- the ``identify the feature, pick the lens'' thesis on real physical data.
+We measure this on \textbf{SVHN} --- 73{,}257 real street-view photographs of house numbers, a real-world domain with zero overlap with the glyph renderer --- and on \textbf{SARCOS}, 44{,}484 real telemetry records of a 7-DOF robot arm (inverse dynamics: joint positions/velocities/accelerations to torques). On SVHN, the routed program reaches 0.767, below the best fixed conv5 path at 0.805; this is the homogeneous-data boundary case. On SARCOS, the routed program reaches 0.0185 NMSE versus 0.0198 for the reported fixed-path pilot, with an interpretable speed-correlated policy: linear on slower configurations and nonlinear on faster ones. The comparison is a pilot rather than a universal superiority claim; a submission-grade result should repeat SARCOS across seeds with the matched epoch budget and report speed-stratified confidence intervals.
 
 \section{Related Work}
 Mixture-of-experts \cite{switchtransformer,condcomp} routes tokens to parallel experts; we add visual-cue+goal routing, oracle-supervised staged training, and per-depth per-sample program routing (non-static layers). Dynamic networks \cite{dynamicnn} change depth/width/skips; we switch the family of computation. NAS \cite{nas} searches one structure per dataset at heavy cost; we switch per sample at inference. RepVGG \cite{repvgg} folds branches at inference; we keep them live. Sim-to-real \cite{domainrand,sim2real} adapts weights or renders domains; we show structure adaptation is more parameter-efficient.

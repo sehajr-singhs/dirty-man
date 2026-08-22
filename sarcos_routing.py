@@ -17,6 +17,7 @@ nonlinear when fast).
 Run:  python sarcos_routing.py   (writes results/sarcos_routing.json)
 """
 
+import copy
 import json
 import os
 import tempfile
@@ -33,7 +34,17 @@ RESULTS = "results"
 
 def load_sarcos(root=None):
     import scipy.io as sio
-    root = root or os.path.join(tempfile.gettempdir(), "sarcos")
+    if root is None:
+        candidates = [os.path.join(tempfile.gettempdir(), "sarcos"),
+                      "/kaggle/input/sarcos", "/kaggle/input"]
+        root = next((p for p in candidates
+                     if os.path.exists(os.path.join(p, "sarcos_inv.mat"))), None)
+        if root is None and os.path.isdir("/kaggle/input"):
+            for base, _, files in os.walk("/kaggle/input"):
+                if "sarcos_inv.mat" in files:
+                    root = base
+                    break
+        root = root or os.path.join(tempfile.gettempdir(), "sarcos")
     tr = sio.loadmat(os.path.join(root, "sarcos_inv.mat"))["sarcos_inv"]
     te = sio.loadmat(os.path.join(root, "sarcos_inv_test.mat"))["sarcos_inv_test"]
     Xtr, ytr = tr[:, :21].astype(np.float32), tr[:, 21:].astype(np.float32)
@@ -138,7 +149,8 @@ def annealed_tau(ep, epochs, tau0=1.5, tau1=0.5):
 
 
 def train(model, X, y, Xte, yte, epochs=25, name="", routed=True, lr=1e-3,
-          warmup=0.2):
+          warmup=0.2, device="cpu"):
+    model.to(device)
     opt = torch.optim.Adam(model.parameters(), lr=lr)
     for ep in range(epochs):
         model.train()
@@ -146,6 +158,7 @@ def train(model, X, y, Xte, yte, epochs=25, name="", routed=True, lr=1e-3,
         warm = routed and (ep < warmup * epochs)   # fixed-path warm-up
         tot = n = 0
         for xb, yb in make_batches(X, y):
+            xb, yb = xb.to(device), yb.to(device)
             opt.zero_grad()
             if warm:
                 # bypass routing: train the ops through the best static path
@@ -170,31 +183,84 @@ def train(model, X, y, Xte, yte, epochs=25, name="", routed=True, lr=1e-3,
 @torch.no_grad()
 def evaluate(model, X, y):
     model.eval()
+    device = next(model.parameters()).device
     err = 0.0
     for xb, yb in make_batches(X, y, shuffle=False):
+        xb, yb = xb.to(device), yb.to(device)
         err += F.mse_loss(model(xb, tau=0.5, hard=True), yb).item() * len(xb)
     return err / len(X)
+
+
+@torch.no_grad()
+def evaluate_by_speed(model, X, y, n_bins=4):
+    """Evaluate errors in velocity-magnitude bins, not only in aggregate.
+
+    The aggregate SARCOS result can hide whether routing helps on the regime
+    that motivates it. Fixed quantile bins make the slow/fast claim testable
+    and avoid choosing a threshold after looking at the predictions.
+    """
+    model.eval()
+    device = next(model.parameters()).device
+    speed = np.linalg.norm(X[:, 7:14], axis=1)
+    edges = np.quantile(speed, np.linspace(0.0, 1.0, n_bins + 1))
+    bins = []
+    for i in range(n_bins):
+        lo, hi = edges[i], edges[i + 1]
+        mask = (speed >= lo) & (speed <= hi if i == n_bins - 1 else speed < hi)
+        if not np.any(mask):
+            continue
+        pred_err = []
+        for xb, yb in make_batches(X[mask], y[mask], shuffle=False):
+            xb, yb = xb.to(device), yb.to(device)
+            pred_err.append(((model(xb, tau=0.5, hard=True) - yb) ** 2).mean(dim=1).cpu().numpy())
+        bins.append({
+            "bin": i,
+            "speed_lo": round(float(lo), 6),
+            "speed_hi": round(float(hi), 6),
+            "n": int(mask.sum()),
+            "mse": round(float(np.concatenate(pred_err).mean()), 8),
+        })
+    return bins
 
 
 @torch.no_grad()
 def lens_profile(model, X, y):
     """Per-depth lens shares, and lens vs. speed (velocity magnitude)."""
     model.eval()
+    device = next(model.parameters()).device
     rec = {}
     d1s, d2s, speeds = [], [], []
     for xb, yb in make_batches(X, y, bs=512, shuffle=False):
         r = {}
-        model(xb, tau=0.5, hard=True, record=r)
+        model(xb.to(device), tau=0.5, hard=True, record=r)
         d1s.append(r["d1"]); d2s.append(r["d2"])
         speeds.append(xb[:, 7:14].norm(dim=1).numpy())
     d1 = np.concatenate(d1s); d2 = np.concatenate(d2s)
     sp = np.concatenate(speeds)
-    return {
+    def safe_mean(values):
+        return None if len(values) == 0 else round(float(values.mean()), 3)
+
+    profile = {
         "d1_shares": {OPS[i]: round(float((d1 == i).mean()), 3) for i in range(len(OPS))},
         "d2_shares": {OPS[i]: round(float((d2 == i).mean()), 3) for i in range(len(OPS))},
-        "linear_lens_speed": round(float(sp[d1 == 0].mean()), 3),   # mean |v| when linear chosen
-        "nonlinear_lens_speed": round(float(sp[d1 != 0].mean()), 3),
+        "linear_lens_speed": safe_mean(sp[d1 == 0]),
+        "nonlinear_lens_speed": safe_mean(sp[d1 != 0]),
     }
+    # Quantile-bin routing shares expose whether the apparent speed split is
+    # monotone or merely a difference in two selected-group means.
+    edges = np.quantile(sp, np.linspace(0.0, 1.0, 5))
+    profile["d1_shares_by_speed_quartile"] = []
+    for i in range(4):
+        mask = (sp >= edges[i]) & (sp <= edges[i + 1] if i == 3 else sp < edges[i + 1])
+        if np.any(mask):
+            profile["d1_shares_by_speed_quartile"].append({
+                "quartile": i,
+                "speed_lo": round(float(edges[i]), 3),
+                "speed_hi": round(float(edges[i + 1]), 3),
+                "n": int(mask.sum()),
+                "shares": {OPS[j]: round(float((d1[mask] == j).mean()), 3) for j in range(len(OPS))},
+            })
+    return profile
 
 
 def main():
@@ -202,11 +268,32 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--routed-only", action="store_true",
                     help="skip linear regression + static grid; train routed only")
+    ap.add_argument("--root", default=None,
+                    help="directory containing sarcos_inv.mat and sarcos_inv_test.mat")
+    ap.add_argument("--static-epochs", type=int, default=30,
+                    help="epochs for every fixed path (matched to routed by default)")
+    ap.add_argument("--routed-epochs", type=int, default=30,
+                    help="epochs for the routed model")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--max-train", type=int, default=None)
+    ap.add_argument("--max-test", type=int, default=None)
+    ap.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     args = ap.parse_args()
 
     os.makedirs(RESULTS, exist_ok=True)
     t0 = time.time()
-    Xtr, ytr, Xte, yte = load_sarcos()
+    Xtr, ytr, Xte, yte = load_sarcos(args.root)
+    if args.max_train is not None:
+        Xtr, ytr = Xtr[:args.max_train], ytr[:args.max_train]
+    if args.max_test is not None:
+        Xte, yte = Xte[:args.max_test], yte[:args.max_test]
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    device = ("cuda" if args.device == "auto" and torch.cuda.is_available()
+              else args.device if args.device != "auto" else "cpu")
+    if device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("--device cuda requested but CUDA is unavailable")
+    print(f"device={device}", flush=True)
     print(f"SARCOS {Xtr.shape[0]} train / {Xte.shape[0]} test "
           f"(real 7-DOF robot arm telemetry)", flush=True)
 
@@ -218,7 +305,14 @@ def main():
 
     results = {"experiment": "sarcos_routing",
                "data": "SARCOS real robot arm inverse dynamics (44,484 train / 4,449 test)",
-               "metric": "normalized MSE on 7 joint torques (lower better)"}
+               "metric": "normalized MSE on 7 joint torques (lower better)",
+               "seed": args.seed,
+               "evaluation_protocol": {
+                   "static_epochs": args.static_epochs,
+                   "routed_epochs": args.routed_epochs,
+                   "speed_stratification": "test-set velocity-magnitude quartiles",
+                   "device": device,
+               }}
 
     if not args.routed_only:
         # linear regression baseline
@@ -228,17 +322,30 @@ def main():
         results["linear_regression"] = {"test_nmse": round(lin_mse, 5)}
         print(f"[linear regression] test_nmse {lin_mse:.5f}", flush=True)
 
-        # best fixed path (grid over the 9 static paths)
+        # Select the best fixed path using the same epoch budget as routing.
+        # Preserve its weights for a paired, speed-stratified comparison.
         best = None
+        static_grid = []
+        best_state = None
         for p1 in OPS:
             for p2 in OPS:
                 m = StaticDynamics(path=(p1, p2))
-                r = train(m, Xtr, ytr, Xte, yte, epochs=15, name=f"static {p1},{p2}",
-                          routed=False)
+                r = train(m, Xtr, ytr, Xte, yte, epochs=args.static_epochs,
+                          name=f"static {p1},{p2}", routed=False, device=device)
+                row = {"path": f"{p1},{p2}", "test_nmse": r["test_nmse"],
+                       "params": r["params"]}
+                static_grid.append(row)
                 if best is None or r["test_nmse"] < best[1]:
                     best = (f"{p1},{p2}", r["test_nmse"], r["params"])
-        results["static_best"] = {"path": best[0], "test_nmse": best[1],
-                                  "params": best[2]}
+                    best_state = {k: v.detach().cpu().clone() for k, v in m.state_dict().items()}
+        results["static_grid"] = static_grid
+        best_model = StaticDynamics(path=tuple(best[0].split(",")))
+        best_model.load_state_dict(best_state)
+        best_model.to(device)
+        results["static_best"] = {
+            "path": best[0], "test_nmse": best[1], "params": best[2],
+            "mse_by_speed_quartile": evaluate_by_speed(best_model, Xte, yte),
+        }
         print(f"[static best] path={best[0]} test_nmse {best[1]:.5f}", flush=True)
     else:
         results["linear_regression"] = prev.get("linear_regression", {})
@@ -247,9 +354,12 @@ def main():
 
     # the routed program
     net = RoutedDynamics()
-    r = train(net, Xtr, ytr, Xte, yte, epochs=30, name="routed", routed=True)
+    r = train(net, Xtr, ytr, Xte, yte, epochs=args.routed_epochs,
+              name="routed", routed=True, device=device)
     results["routed"] = r
+    results["routed"]["mse_by_speed_quartile"] = evaluate_by_speed(net, Xte, yte)
     results["lens_profile"] = lens_profile(net, Xte, yte)
+
     print(f"[routed] test_nmse {r['test_nmse']} params {r['params']}", flush=True)
     print(f"[lens profile] {json.dumps(results['lens_profile'])}", flush=True)
 

@@ -839,68 +839,54 @@ with the mis-routing probability $\alpha$. \qed
 
 The non-static experiment (Sec.~\ref{sec:protocolF}) sharpens the separation
 claim from \emph{maps} to \emph{programs}. A fixed computational path has a
-fixed inductive bias; the routed network is a weighted mixture of the paths it
-contains. Because the output head is linear, the mixture is exact.
+fixed inductive bias; hard routing lets each sample execute a different path
+through the same bank. Soft per-depth gates are differentiable training
+relaxations, but because the intermediate operators are nonlinear they are not,
+in general, a convex combination of complete-path outputs. We therefore state
+the exact expressivity result for hard routing, and treat soft routing as an
+optimization device rather than attributing it an invalid convex-hull guarantee.
 
-\begin{theorem}[Program hull]
+\begin{theorem}[Hard-routed program expressivity]
 \label{thm:program-hull}
 Let the op bank define $M$ static paths $\pi_1,\dots,\pi_M$ through a
 $D$-depth network (for the 3-depth bank of Sec.~\ref{sec:protocolF},
-$M=4\cdot4\cdot3=48$), let $f_{\pi_p}$ be the function computed by path
-$\pi_p$ with the \emph{shared} op weights, and let the routed network use
-soft gates with a \emph{linear} output head. Then for every input $x$ and
-gate weights $\{w_d\}_{d=1}^D$ (each $w_d$ a distribution over depth-$d$
-ops),
+$M=4\cdot4\cdot3=48$), with shared weights. A hard-routed network whose
+per-depth gates select one operation for each input can realize every path
+$f_{\pi_p}$ in the bank. More generally, if the router implements a measurable
+policy $\pi:\mathcal{X}\to\{\pi_1,\dots,\pi_M\}$, the resulting predictor is
 \[
-  g(x) \;=\; \sum_{p=1}^{M} w_p(x)\, f_{\pi_p}(x),
-  \qquad
-  w_p(x)=\prod_{d=1}^{D} w_{d,\,p_d}(x)\;\ge\;0,\quad \sum_p w_p(x)=1.
+  g_\pi(x)=f_{\pi(x)}(x).
 \]
-Hence (i) every static path is a special case ($w_p=\mathbf{e}_p$);
-(ii) for any loss $\ell$ convex in the prediction (cross-entropy, MSE),
-$\ell(g(x))\le\sum_p w_p(x)\,\ell(f_{\pi_p}(x))$ --- the routed prediction
-is never worse than the weighted average of the paths it could have taken;
-and (iii) if the Bayes-optimal predictor is a \emph{strict} mixture of paths
-(no single path attains it), then every static network has a positive gap
-while the routed network closes it to zero as the router concentrates the
-weights on the mixture.
+Thus the hard-routed hypothesis class contains every fixed path and also all
+feature-conditional selections among those paths. It strictly contains the
+fixed-path class whenever there are inputs $x,x'$ for which different paths
+are selected and no single path matches both selections.
 \end{theorem}
 
 \begin{proof}
-Unroll the network: each depth computes a convex combination of op outputs,
-and the linear head distributes over the depth-3 mixture, then over depth 2,
-then depth 1 (all compositions are linear in the gates because the head is
-linear). The coefficient of path $p=(p_1,\dots,p_D)$ is the product of the
-gate probabilities along $p$, giving the displayed expansion; non-negativity
-and normalization follow from each $w_d$ being a distribution. (i) is the
-one-hot case. (ii) is Jensen's inequality applied to the convex loss.
-For (iii): if the optimal predictor $f^*=\sum_p \lambda_p f_{\pi_p}$ is a
-strict mixture ($\lambda$ not a vertex), any single path $\pi_p$ has
-$\ell(f_{\pi_p})>\ell(f^*)$ by convexity (with strictness inherited from
-strict convexity of cross-entropy in the logits, e.g.\ on distributions where
-no path dominates), whereas the routed network realizes $f^*$ exactly by
-setting $w_p=\lambda_p$; a router trained with oracle supervision
-(Theorem~\ref{thm:routing}) learns any achievable gate map, so the gap closes
-with routing accuracy. \qed
+Choose the router logits so that the desired operation has a unique maximum at
+each depth. In the zero-temperature limit, each gate becomes one-hot and the
+network executes the corresponding path exactly. A constant policy recovers any
+fixed path, while an input-dependent policy combines paths conditionally. The
+strict-containment statement follows whenever the conditional policy has lower
+risk than every constant policy; no convexity assumption is needed. For finite
+temperature, the implementation uses a differentiable soft relaxation, and the
+zero-temperature argument describes its hard-deployment limit. \qed
 \end{proof}
 
-The theorem also \emph{locates} the SVHN result. The routed network's
-hypothesis class contains the convex hull of the static paths, so its
-\emph{best-in-hindsight} routing can never do worse than the best fixed path;
-condition (iii) gives the strict improvement precisely when the data demands
-different programs for different inputs. The SVHN measurement is the negative
-side of this statement: digit photos are \emph{homogeneous} --- every class is
-the same kind of object, so a single 5x5 convolution suffices and the
-Bayes-optimal predictor is \emph{not} a strict mixture of paths. There, the
-learned router (0.767) sits below the best fixed path (0.805) because it pays
-soft-mixture and routing-learning costs for a strict-mixture benefit the data
-never offers. The \emph{positive} side is SARCOS (Sec.~\ref{sec:sarcos}), where
-the optimal predictor \emph{is} feature-conditional --- linear for slow
-configurations, nonlinear for fast ones --- and the routed program beats the
-best fixed path by 6.4\% while its lens choice is exactly the speed split.
-Together the two experiments delimit the thesis: non-static computation pays
-when the input is genuinely heterogeneous, and this is measurable, not
-asserted.
+The theorem also \emph{locates} the SVHN result. Hard routing contains every
+fixed path and can express feature-conditional policies, but a learned finite-
+temperature router is not guaranteed to outperform the best static path: it
+pays optimization, calibration, and soft-mixture costs. The SVHN measurement
+is the negative side of this statement: digit photos are \emph{homogeneous},
+and the best fixed 5x5 convolution reaches 0.805 while the learned router
+reaches 0.767. The \emph{positive} side is SARCOS (Sec.~\ref{sec:sarcos}), where
+the conditional policy is useful --- the routed program reaches 0.0185 versus
+0.0198 for the reported fixed-path pilot, and its lens choices correlate with
+configuration speed. The contrast is a boundary condition, not a universal
+improvement claim: non-static computation should pay when heterogeneity exceeds
+the cost of learning the policy, and this test makes that hypothesis falsifiable.
+
 
 \subsection{Protocol E: real handwriting, zero synthetic overlap}
 \label{sec:protocolE}

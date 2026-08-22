@@ -518,12 +518,12 @@
         </div>
       </div>
       <div class="impact">
-        <img class="impact-img" src="figs/fig4_protocol_c.png" alt="Protocol C: goal-conditioned routing, 4x better reconstruction">
+        <img class="impact-img" src="figs/fig4_protocol_c.png" alt="Protocol C: goal-conditioned routing, 7x better reconstruction">
         <div class="impact-body">
-          <div class="impact-num">4&times; better recon</div>
+          <div class="impact-num">7&times; better recon</div>
           <h4>The goal is part of the decision</h4>
-          <p>Feeding the task into the router improves reconstruction MSE 0.139 &rarr; 0.034 with classification
-            <b>up</b> 0.810 &rarr; 0.821. Computation conditioned on intent, not just input.</p>
+          <p>Per-goal oracle supervision improves reconstruction MSE 0.143 &rarr; 0.020 with classification
+            <b>up</b> 0.817 &rarr; 0.821. Computation is conditioned on intent, not just input.</p>
         </div>
       </div>
       <div class="impact">
@@ -540,8 +540,8 @@
       <p class="note" style="margin-top: 1.4rem;">These are the directions the architecture opens — not claims
         it has met. Every number on this page is measured; every vision above it is a measured capability
         pointed at a problem. The honest boundary is stated in the papers: the mixed-domain margin over the best
-        static is small (routing is a bonus when the bank is strong), the goal router has not yet specialized
-        per goal, and the decisive next experiments are real-world video and image domains.</p>
+        static is small, routing loses on homogeneous SVHN, and the SARCOS robot result is a single pilot that
+        still needs multi-seed matched-budget replication before a high-impact submission.</p>
     </div>
   </div>
 </section>

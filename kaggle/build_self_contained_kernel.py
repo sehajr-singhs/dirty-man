@@ -23,6 +23,7 @@ FILES = [
     "flagship_discovered_law.py",
     "nonstatic_layers.py",
     "run_ns_sweep.py",
+    "sarcos_routing.py",
 ]
 
 BOILERPLATE_HEAD = '''"""The Dirty Man — headline experiments, self-contained (Kaggle GPU).
@@ -121,11 +122,17 @@ if __name__ == "__main__":
               "--static-epochs", "8", "--router-epochs", "10",
               "--switch-epochs", "5"])))
 
+    _run("SARCOS: matched-budget non-static routing on real robot telemetry",
+         lambda: (__import__("sarcos_routing").main(
+             ["--static-epochs", "30", "--routed-epochs", "30",
+              "--device", "auto"])))
+
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
     for f in ["protocol_a.json", "protocol_c.json", "protocol_e.json",
               "training_intervention.json", "flagship_regime_routing.json",
-              "flagship_discovered_law.json", "nonstatic_svhn.json"]:
+              "flagship_discovered_law.json", "nonstatic_svhn.json",
+              "sarcos_routing.json"]:
         p = os.path.join("results", f)
         if os.path.exists(p):
             print(f"  {p}  ({os.path.getsize(p)} bytes)", flush=True)

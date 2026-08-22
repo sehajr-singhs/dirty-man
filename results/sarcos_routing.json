@@ -2,6 +2,13 @@
   "experiment": "sarcos_routing",
   "data": "SARCOS real robot arm inverse dynamics (44,484 train / 4,449 test)",
   "metric": "normalized MSE on 7 joint torques (lower better)",
+  "status": "single-seed pilot; not a matched-budget multi-seed claim",
+  "evaluation_protocol": {
+    "static_epochs": 15,
+    "routed_epochs": 30,
+    "speed_stratification": "not recorded in this pilot; rerun with sarcos_routing.py defaults",
+    "device": "cpu"
+  },
   "linear_regression": {
     "test_nmse": 0.11523
   },
