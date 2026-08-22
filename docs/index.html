@@ -407,6 +407,41 @@
   </div>
 </section>
 
+<!-- ================= NON-STATIC LAYERS + REAL ROBOT ================= -->
+<section class="section" style="padding-top: 0.5rem;">
+  <div class="container">
+    <h2 class="title">Non-static layers: routing <em>inside</em> the network, on real robot dynamics</h2>
+    <div class="content has-text-justified">
+      <p>The flagship routes between <strong>whole networks</strong> — a useful escape from a single map, but a
+        desk editor files it under mixture-of-experts. The sharper claim is routing <strong>inside</strong> the
+        network: at every depth, a router picks the primitive <em>layer</em> that processes <em>this</em> sample's
+        current representation. The architecture is no longer a fixed stack of layers; it is a per-sample
+        <strong>program of computation</strong> — each input walks its own path, and different inputs take
+        different paths. That is the difference between "choose the right network" (MoE) and "the network
+        itself is non-static."</p>
+      <p>Where does that help, and where does it not? On <strong>SARCOS</strong> — real telemetry from a
+        7-DOF robot arm (44,484 training records → 7 joint torques) — the answer is clean. Near-static
+        configurations are nearly linear in pose (gravity compensation dominates); at speed, Coriolis and
+        centrifugal terms make the mapping strongly nonlinear. The routed program learns exactly that split:
+        it routes <strong>slow configurations to the linear lens (‖q̇‖ = 1.62) and fast ones to the nonlinear
+        lens (‖q̇‖ = 2.56)</strong>, and by doing so beats the best of nine fixed paths through the same op bank
+        (<strong>0.0185 vs 0.0198 normalized MSE, −6.4%</strong>) with no physics hardcoded. This is the
+        "identify the feature, pick the lens" thesis on real physical data.</p>
+      <p>On <strong>SVHN</strong> (real street-view digit photos) the same per-depth routing also runs and
+        discovers per-class programs (every class picks a 5×5 convolution at depth 1; depths 2–3 differ per
+        class) — but the task is structurally homogeneous, so routing does <strong>not</strong> beat a
+        well-chosen static path (router 0.767 vs best fixed conv5 0.805), and a coarse whole-network MoE
+        switch collapses (0.654). The contrast is the point: routing pays exactly when the input is genuinely
+        heterogeneous — where a single fixed network must compromise — and it is a pure cost where it is not.
+        We report both sides of that boundary.</p>
+    </div>
+    <p class="cap"><b>SARCOS inverse dynamics (real robot arm):</b> routed program 0.0185 vs best static
+      0.0198 NMSE (−6.4%); the router sorts slow → linear (‖q̇‖ = 1.62) and fast → nonlinear (‖q̇‖ = 2.56).
+      <b>SVHN (real photos):</b> routing matches but does not beat the best static path on homogeneous digits
+      (0.767 vs 0.805) — the boundary of when non-static computation helps.</p>
+  </div>
+</section>
+
 <!-- ================= ABSTRACT ================= -->
 <section class="section" style="padding-top: 0.5rem;">
   <div class="container">

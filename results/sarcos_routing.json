@@ -1,0 +1,31 @@
+{
+  "experiment": "sarcos_routing",
+  "data": "SARCOS real robot arm inverse dynamics (44,484 train / 4,449 test)",
+  "metric": "normalized MSE on 7 joint torques (lower better)",
+  "linear_regression": {
+    "test_nmse": 0.11523
+  },
+  "static_best": {
+    "path": "mlp,mlp",
+    "test_nmse": 0.01983,
+    "params": 28103
+  },
+  "routed": {
+    "test_nmse": 0.01852,
+    "params": 42221
+  },
+  "lens_profile": {
+    "d1_shares": {
+      "linear": 0.332,
+      "relu": 0.331,
+      "mlp": 0.337
+    },
+    "d2_shares": {
+      "linear": 0.317,
+      "relu": 0.331,
+      "mlp": 0.352
+    },
+    "linear_lens_speed": 1.619,
+    "nonlinear_lens_speed": 2.556
+  }
+}

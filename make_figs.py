@@ -457,6 +457,126 @@ def fig9_discovered_law() -> None:
     save(fig, "fig9_discovered_law.png")
 
 
+def fig10_nonstatic_svhn() -> None:
+    """Non-static computation on SVHN (real street photos):
+    accuracy bars (static / routed / MoE switch) + dominant lens per digit."""
+    try:
+        d = load("nonstatic_svhn.json")
+    except FileNotFoundError:
+        print("skip fig10: no nonstatic_svhn.json yet")
+        return
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.7), gridspec_kw={"width_ratios": [1, 1.15]})
+
+    # Panel 1: accuracy comparison
+    models = [("static", "STATIC\n(fixed path)", MUTED),
+              ("router", "NON-STATIC\n(routed program)", WIN),
+              ("switch", "SWITCH\n(whole-net MoE)", "#b5822e")]
+    names, vals, colors = [], [], []
+    for key, label, color in models:
+        if key in d:
+            names.append(label)
+            vals.append(d[key]["acc"])
+            colors.append(color)
+    x = np.arange(len(names))
+    bars = ax.bar(x, vals, 0.52, color=colors, edgecolor="white")
+    for xi, v in zip(x, vals):
+        ax.text(xi, v + 0.005, f"{v:.4f}", ha="center", fontsize=8.5, color=INK)
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, fontsize=8)
+    ax.set_ylim(0, 1.0)
+    ax.set_ylabel("SVHN test accuracy (real street photos)")
+    if "router" in d and "static" in d:
+        ax.set_title(f"routed program +{(d['router']['acc'] - d['static']['acc']) * 100:.2f} pts over best fixed path",
+                     fontsize=9.5, color=INK)
+    ax.spines[["top", "right"]].set_visible(False)
+
+    # Panel 2: dominant lens per digit per depth (heatmap of op indices)
+    dom = d.get("dominant_lens_per_class")
+    if dom:
+        names_by_depth = {0: ["conv3", "conv5", "conv1", "sep"],
+                          1: ["linear", "relu", "mlp", "gated"],
+                          2: ["linear", "relu", "mlp"]}
+        M = np.zeros((10, 3))
+        for c in range(10):
+            for dd in range(3):
+                entry = dom[str(c)][dd]
+                if entry:
+                    try:
+                        M[c, dd] = names_by_depth[dd].index(entry[0])
+                    except ValueError:
+                        M[c, dd] = -1
+                else:
+                    M[c, dd] = -1
+        im = ax2.imshow(M, cmap="viridis", aspect="auto", vmin=-0.5)
+        ax2.set_xticks(range(3))
+        ax2.set_xticklabels(["depth 1 (spatial)", "depth 2", "depth 3"], fontsize=8.5)
+        ax2.set_yticks(range(10))
+        ax2.set_yticklabels([f"digit {c}" for c in range(10)], fontsize=8)
+        for c in range(10):
+            for dd in range(3):
+                entry = dom[str(c)][dd]
+                lab = entry[0] if entry else "-"
+                ax2.text(dd, c, lab, ha="center", va="center", fontsize=7,
+                         color="white" if M[c, dd] >= 1.5 else "black")
+        ax2.set_title("dominant lens per digit class (per depth)", fontsize=9.5, color=INK)
+        ax2.grid(False)
+
+    fig.suptitle("Non-static computation on real street-view photos (SVHN)",
+                 fontsize=11, fontweight="bold", y=1.02)
+    save(fig, "fig10_nonstatic_svhn.png")
+
+
+def fig11_sarcos() -> None:
+    """SARCOS real robot-arm inverse dynamics: linear / best static / routed,
+    plus the lens-vs-speed profile (linear lens on slow states)."""
+    try:
+        d = load("sarcos_routing.json")
+    except FileNotFoundError:
+        print("skip fig11: no sarcos_routing.json yet")
+        return
+
+    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(10.2, 3.6))
+
+    # Panel 1: NMSE comparison
+    names, vals, colors = [], [], []
+    if "linear_regression" in d:
+        names.append("linear\nregression"); vals.append(d["linear_regression"]["test_nmse"]); colors.append(FAINT)
+    if "static_best" in d:
+        names.append("best static\npath"); vals.append(d["static_best"]["test_nmse"]); colors.append(MUTED)
+    if "routed" in d:
+        names.append("routed\nprogram"); vals.append(d["routed"]["test_nmse"]); colors.append(WIN)
+    x = np.arange(len(names))
+    ax.bar(x, vals, 0.5, color=colors, edgecolor="white")
+    for xi, v in zip(x, vals):
+        ax.text(xi, v + 0.002, f"{v:.4f}", ha="center", fontsize=8.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels(names, fontsize=8.5)
+    ax.set_ylabel("normalized torque MSE (lower better)")
+    ax.set_title("SARCOS inverse dynamics (real 7-DOF robot arm)", fontsize=9.5, color=INK)
+    ax.spines[["top", "right"]].set_visible(False)
+
+    # Panel 2: lens profile — shares and speed selectivity
+    prof = d.get("lens_profile", {})
+    if prof:
+        d1 = prof.get("d1_shares", {})
+        keys = list(d1.keys())
+        vals = [d1[k] for k in keys]
+        ax2.bar(range(len(keys)), vals, 0.5, color=[LINK, MUTED, "#b5822e"][:len(keys)], edgecolor="white")
+        ax2.set_xticks(range(len(keys)))
+        ax2.set_xticklabels(keys, fontsize=8.5)
+        ax2.set_ylabel("share of states routed to lens")
+        ax2.set_title("depth-1 lens use on real robot states", fontsize=9.5, color=INK)
+        if "linear_lens_speed" in prof and "nonlinear_lens_speed" in prof:
+            ax2.text(0.5, -0.28,
+                     f"mean |v| under linear lens {prof['linear_lens_speed']} vs nonlinear {prof['nonlinear_lens_speed']} "
+                     f"(slow states \u2192 linear lens)",
+                     transform=ax2.transAxes, ha="center", fontsize=7.5, color=MUTED)
+        ax2.spines[["top", "right"]].set_visible(False)
+
+    save(fig, "fig11_sarcos.png")
+
+
 if __name__ == "__main__":
     style()
     fig1_architecture()
@@ -468,4 +588,6 @@ if __name__ == "__main__":
     fig7_glyphs()
     fig8_flagship()
     fig9_discovered_law()
+    fig10_nonstatic_svhn()
+    fig11_sarcos()
     print("all figures written to figs/ and docs/figs/")

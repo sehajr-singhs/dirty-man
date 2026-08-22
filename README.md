@@ -26,6 +26,8 @@ input ──► primitive_2 ────────┴──► bottleneck ─�
 
 **The discovered-law flagship — no physics is given.** A fair objection to the flagship above is that the laws were hardcoded. The discovered-law variant (`flagship_discovered_law.py`) closes that gap: every expert is a *learned* network, and no law is provided to any learned component. The inverted-design principle moves inside each expert — the known pendulum skeleton is the unchangeable harness, and each specialist learns only the *residual force law* of its regime (~0, ~−bω, ~A sin Ωt). Learning the residual on an exact skeleton (instead of raw next-state dynamics) is what keeps rollouts stable. Learned specialists are near-exact on their own regime; the static MLP still fails on every regime; the routed system is **5–720× better** (0.004–0.808 vs 0.96–2.89), tracking the oracle specialist, with the router discovering the law at 93–99%. And as the number of governing laws grows (2→3→4), a single map is stuck at its error floor while routing stays an order of magnitude lower (4.5–9× better at every law count) — each law gets its own specialist instead of one compromise.
 
+**Non-static layers on real robot dynamics — routing *inside* the network.** The sharpest form of the thesis isn't switching between whole networks (that's MoE) but routing *inside* one network: at every depth a router selects the primitive *layer* for *that* sample, so each input walks its own program of computation. On **SARCOS** — real 7-DOF robot-arm telemetry (44,484 train → 7 torques) — the routed program beats the best of nine fixed paths (0.0185 vs 0.0198 NMSE, −6.4%) and its choice is physically interpretable: it routes slow configurations to the linear lens (‖q̇‖ = 1.62) and fast ones to the nonlinear lens (‖q̇‖ = 2.56). On SVHN (real street photos) it also runs per-sample programs. See `sarcos_routing.py` and `nonstatic_layers.py`.
+
 The router's policy is interpretable: on clean sim it uses dense (flat lens) and cnn; as corruption grows it abandons dense and shifts to relu/cnn (spatial lenses). On real handwritten digits it routes to cnn/dense — it has learned to identify which lens the input needs. The NMI paper (`docs/papers/nmi_paper.tex`) includes a theory section with five theorems: oracle-supervised routing learns the regime policy (VC-dimension bound), structural adaptation needs fewer labels than weight adaptation (sample-complexity bound), the shared bottleneck keeps switching geometry-continuous, a **single-map separation bound** — a fixed map must mis-represent at least one law by half the per-step energy gap, while routing drives the gap to zero — and a **scaling bound** — a single map's error is bounded below by a constant independent of the number of laws, while routing's error decays with router accuracy, so more laws hurt one map, not routing.
 
 ## Getting started
@@ -52,6 +54,12 @@ python flagship_regime_routing.py
 # DISCOVERED-LAW FLAGSHIP: learned specialists, no hardcoded physics
 python flagship_discovered_law.py
 
+# NON-STATIC LAYERS: per-sample program routing on real SVHN photos
+python nonstatic_layers.py --model router --epochs 15
+
+# REAL ROBOT: per-depth routing on SARCOS inverse dynamics
+python sarcos_routing.py
+
 # Figures + interactive playground (read committed results/*.json)
 python make_figs.py
 python make_playground.py
@@ -72,6 +80,8 @@ dirty_man/            core package
 training_intervention.py  the Dirty Man as a training assistant: detects a learner's failure regime and intervenes
 flagship_regime_routing.py  THE FLAGSHIP: a single map cannot obey two laws; routing can (inverted design)
 flagship_discovered_law.py  DISCOVERED-LAW FLAGSHIP: learned specialists, no hardcoded physics + scaling curve
+nonstatic_layers.py  NON-STATIC LAYERS: per-sample, per-depth program routing on real SVHN photos
+sarcos_routing.py    REAL ROBOT: per-depth routing on SARCOS inverse dynamics (interpretable lens selection)
 run_experiments.py    protocols A–E, staged training, checkpoint/resume, result JSONs
 make_figs.py          figures 1–8 from results/*.json (nothing hard-coded)
 make_playground.py    docs/playground.html from results/playground.json

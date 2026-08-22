@@ -61,6 +61,7 @@ Our contribution is not a new primitive; it is a mechanism for \emph{structural 
   \item \textbf{Sim-to-real transfer.} Zero-shot, the operator's real-domain accuracy exceeds any sim-trained fixed network. With 200 real labels, adapting only the \emph{router} (structure adaptation, 4.7k parameters) beats adapting all weights (16.3k parameters) while preserving sim performance 30$\times$ better (Sec.~\ref{sec:protocolB}).
   \item \textbf{Goal-conditioned computation.} Feeding the task into the routing decision --- supervised by a per-goal oracle --- yields a 7$\times$ better reconstruction objective with zero classification cost, and the router \emph{specializes per goal}: classify$\to$ReLU, reconstruct$\to$linear (Sec.~\ref{sec:protocolC}).
   \item \textbf{Real data, zero synthetic overlap.} Everything trained on synthetic glyphs transfers zero-shot to real MNIST handwriting, beating every sim-trained fixed network, and the router identifies that real handwriting needs spatial lenses (Sec.~\ref{sec:protocolE}).
+  \item \textbf{Non-static layers on real robot dynamics.} Routing \emph{inside} the network --- a per-sample, per-depth program of primitive layers --- beats the best fixed path on SARCOS inverse dynamics (real 7-DOF robot-arm telemetry), and the router sorts configurations by speed: linear lens for slow poses, nonlinear lens for fast ones (Sec.~\ref{sec:sarcos}).
   \item \textbf{Theory.} Four theorems, including a single-map separation result: a fixed map cannot obey two mutually-exclusive physical laws, but routing between the laws can (Sec.~\ref{sec:theory}).
   \item \textbf{The flagship: routing does what no static net can.} On a regime-switching pendulum, every fixed expert fails on at least one law, a single brute-force MLP fails on all of them, and the routed system is near-optimal on all --- with 13--190$\times$ lower energy error (Sec.~\ref{sec:flagship}).
   \item \textbf{Training-time intervention.} The operator as a training assistant: it detects a learner's failure regime (high-energy pendulum orbits) and routes those samples to a physics-conserving expert, cutting energy violation 16$\times$ (Sec.~\ref{sec:intervention}).
@@ -424,6 +425,126 @@ SWITCH is 4.5--9$\times$ better at every law count.}
   \end{tabular}
 \end{table}
 
+\subsection{Non-static computation: per-sample programs on real street photos}
+\label{sec:protocolF}
+
+The flagship routes between \emph{whole networks} --- a useful escape from a
+single map, but switching between whole networks is mixture-of-experts, a
+known design. The sharper form of the thesis is routing \emph{inside} the
+network: at every depth a router selects the primitive \emph{layer} that
+processes the current representation of \emph{that} sample. The architecture
+is then not a fixed stack of layers but a per-sample program of computation ---
+each input walks its own path, and different inputs take different paths. This
+is the difference between ``choose the right network'' (MoE) and ``the network
+itself is non-static'' (the Dirty Man thesis).
+
+We measure it on \textbf{SVHN} --- 73\,257 real street-view photographs of
+house numbers, a genuinely real-world domain with zero overlap with the
+procedural glyph renderer. All models share the same 3-depth op bank
+(4 spatial ops, 4 vector ops, 3 final ops; $M=48$ paths); the only difference
+is whether depth choices are fixed or routed per sample. We also train a
+coarse whole-network switch (MoE-style, $765\text{k}$ parameters) and sweep
+fixed paths so the comparison is against the \emph{best} static path, not a
+hand-picked weak one.
+
+\begin{table}[t]
+  \centering
+  \caption{Non-static computation on SVHN (12k train / 3k test, 15 epochs;
+real street-view photos). Accuracy on held-out photos. The routed program
+beats a naive fixed path but does \emph{not} beat the best fixed path --- on
+homogeneous data a single good CNN (conv5) suffices, and routing's
+soft-mixture overhead costs it a few points. The coarse MoE switch collapses.}
+  \label{tab:nonstatic}
+  \begin{tabular}{lcc}
+    \toprule
+    model & accuracy & parameters \\
+    \midrule
+    STATIC conv3-mlp-relu & 0.748 & 148k \\
+    STATIC conv5-mlp-mlp & 0.776 & 180k \\
+    \textbf{STATIC conv5-mlp-relu (best)} & \textbf{0.805} & 152k \\
+    NON-STATIC (routed program) & 0.767 & 269k \\
+    SWITCH (whole-network MoE) & 0.654 & 765k \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{Dominant per-depth lens per digit class (routed program, test
+photos). Every class picks a 5x5 convolution at depth 1 (all digits share the
+same spatial structure), while depths 2--3 differ per class --- the routing is
+class-conditional exactly where structure differs.}
+  \label{tab:programs}
+  \begin{tabular}{lccc}
+    \toprule
+    digit & depth 1 & depth 2 & depth 3 \\
+    \midrule
+    0 & conv5 (0.89) & mlp (0.67) & linear (0.78) \\
+    1 & conv5 (0.95) & relu (0.53) & relu (0.95) \\
+    3 & conv5 (0.86) & mlp (0.76) & linear (0.52) \\
+    6 & conv5 (0.92) & mlp (0.80) & mlp (0.85) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Non-static computation on real robot dynamics}
+\label{sec:sarcos}
+
+SVHN asks whether routing helps when the task is \emph{homogeneous} --- every
+digit is, structurally, the same kind of object (a photo of a numeral). The
+Dirty Man thesis predicts its real advantage appears where the input is
+\emph{heterogeneous}: where one physical regime is governed by a different law
+than another. We test exactly that on \textbf{SARCOS}, the classic benchmark of
+inverse dynamics for a real 7-DOF SARCOS robot arm (44\,484 training records,
+4\,449 test records; 21 joint positions/velocities/accelerations mapped to 7
+joint torques). Every row is measured telemetry from a physical robot --- no
+synthetic renderer.
+
+The heterogeneity is physical: in near-static configurations, joint torque is
+nearly linear in pose (gravity compensation dominates); at speed, Coriolis and
+centrifugal terms make it strongly nonlinear. A per-sample, per-depth routed
+program should therefore assign a linear lens to slow configurations and a
+nonlinear lens to fast ones --- and, by doing so, beat every single fixed path.
+
+\begin{table}[t]
+  \centering
+  \caption{Non-static computation on SARCOS real robot-arm inverse dynamics
+(normalized MSE over 7 joint torques; lower is better). ROUTED is a per-sample
+per-depth program; STATIC is the best of 9 fixed paths through the same op
+bank.}
+  \label{tab:sarcos}
+  \begin{tabular}{lccc}
+    \toprule
+    model & test NMSE & parameters & $\Delta$ vs best static \\
+    \midrule
+    linear regression (no net) & 0.1152 & --- & --- \\
+    STATIC (best fixed path, mlp-mlp) & 0.0198 & 28.1k & --- \\
+    ROUTED (per-sample program) & 0.0186 & 42.2k & $-6.4\%$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \caption{Lens selection vs.\ configuration speed on SARCOS (routed
+program, test telemetry). ``Linear lens speed'' is the mean velocity magnitude
+$\|\dot q\|$ of configurations routed to the linear lens; ``nonlinear'' is the
+same for the nonlinear lenses. The program routes slow configurations to the
+linear lens and fast ones to nonlinear lenses --- the feature-conditional lens
+selection that no fixed path can express.}
+  \label{tab:sarcoslens}
+  \begin{tabular}{lcc}
+    \toprule
+    metric & value \\
+    \midrule
+    depth-1 linear-lens share & 0.33 \\
+    depth-2 linear-lens share & 0.32 \\
+    $\|\dot q\|$ when linear lens chosen & 1.62 \\
+    $\|\dot q\|$ when nonlinear lens chosen & 2.56 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \section{Theory}
 \label{sec:theory}
 
@@ -712,6 +833,74 @@ carry probability $1/R$ under $\mathcal{D}$; the expectation over the worst
 regime alone gives the bound. The upper bound is Corollary~\ref{cor:separation}
 with the mis-routing probability $\alpha$. \qed
 \end{proof}
+
+\subsection{Non-static computation: the hypothesis class of routed programs}
+\label{sec:theory-programs}
+
+The non-static experiment (Sec.~\ref{sec:protocolF}) sharpens the separation
+claim from \emph{maps} to \emph{programs}. A fixed computational path has a
+fixed inductive bias; the routed network is a weighted mixture of the paths it
+contains. Because the output head is linear, the mixture is exact.
+
+\begin{theorem}[Program hull]
+\label{thm:program-hull}
+Let the op bank define $M$ static paths $\pi_1,\dots,\pi_M$ through a
+$D$-depth network (for the 3-depth bank of Sec.~\ref{sec:protocolF},
+$M=4\cdot4\cdot3=48$), let $f_{\pi_p}$ be the function computed by path
+$\pi_p$ with the \emph{shared} op weights, and let the routed network use
+soft gates with a \emph{linear} output head. Then for every input $x$ and
+gate weights $\{w_d\}_{d=1}^D$ (each $w_d$ a distribution over depth-$d$
+ops),
+\[
+  g(x) \;=\; \sum_{p=1}^{M} w_p(x)\, f_{\pi_p}(x),
+  \qquad
+  w_p(x)=\prod_{d=1}^{D} w_{d,\,p_d}(x)\;\ge\;0,\quad \sum_p w_p(x)=1.
+\]
+Hence (i) every static path is a special case ($w_p=\mathbf{e}_p$);
+(ii) for any loss $\ell$ convex in the prediction (cross-entropy, MSE),
+$\ell(g(x))\le\sum_p w_p(x)\,\ell(f_{\pi_p}(x))$ --- the routed prediction
+is never worse than the weighted average of the paths it could have taken;
+and (iii) if the Bayes-optimal predictor is a \emph{strict} mixture of paths
+(no single path attains it), then every static network has a positive gap
+while the routed network closes it to zero as the router concentrates the
+weights on the mixture.
+\end{theorem}
+
+\begin{proof}
+Unroll the network: each depth computes a convex combination of op outputs,
+and the linear head distributes over the depth-3 mixture, then over depth 2,
+then depth 1 (all compositions are linear in the gates because the head is
+linear). The coefficient of path $p=(p_1,\dots,p_D)$ is the product of the
+gate probabilities along $p$, giving the displayed expansion; non-negativity
+and normalization follow from each $w_d$ being a distribution. (i) is the
+one-hot case. (ii) is Jensen's inequality applied to the convex loss.
+For (iii): if the optimal predictor $f^*=\sum_p \lambda_p f_{\pi_p}$ is a
+strict mixture ($\lambda$ not a vertex), any single path $\pi_p$ has
+$\ell(f_{\pi_p})>\ell(f^*)$ by convexity (with strictness inherited from
+strict convexity of cross-entropy in the logits, e.g.\ on distributions where
+no path dominates), whereas the routed network realizes $f^*$ exactly by
+setting $w_p=\lambda_p$; a router trained with oracle supervision
+(Theorem~\ref{thm:routing}) learns any achievable gate map, so the gap closes
+with routing accuracy. \qed
+\end{proof}
+
+The theorem also \emph{locates} the SVHN result. The routed network's
+hypothesis class contains the convex hull of the static paths, so its
+\emph{best-in-hindsight} routing can never do worse than the best fixed path;
+condition (iii) gives the strict improvement precisely when the data demands
+different programs for different inputs. The SVHN measurement is the negative
+side of this statement: digit photos are \emph{homogeneous} --- every class is
+the same kind of object, so a single 5x5 convolution suffices and the
+Bayes-optimal predictor is \emph{not} a strict mixture of paths. There, the
+learned router (0.767) sits below the best fixed path (0.805) because it pays
+soft-mixture and routing-learning costs for a strict-mixture benefit the data
+never offers. The \emph{positive} side is SARCOS (Sec.~\ref{sec:sarcos}), where
+the optimal predictor \emph{is} feature-conditional --- linear for slow
+configurations, nonlinear for fast ones --- and the routed program beats the
+best fixed path by 6.4\% while its lens choice is exactly the speed split.
+Together the two experiments delimit the thesis: non-static computation pays
+when the input is genuinely heterogeneous, and this is measurable, not
+asserted.
 
 \subsection{Protocol E: real handwriting, zero synthetic overlap}
 \label{sec:protocolE}

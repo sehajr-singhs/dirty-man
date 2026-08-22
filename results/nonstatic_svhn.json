@@ -1,0 +1,31 @@
+{
+  "experiment": "nonstatic_layers_svhn",
+  "data": "SVHN real street photos (12k train / 3k test, seed 0)",
+  "metric": "held-out accuracy (higher better)",
+  "static_conv3_mlp_relu": {
+    "acc": 0.748,
+    "params": 148314,
+    "epochs": 8
+  },
+  "static_conv5_mlp_relu": {
+    "acc": 0.8047,
+    "params": 152410,
+    "epochs": 15
+  },
+  "static_conv5_mlp_mlp": {
+    "acc": 0.7763,
+    "params": 180250,
+    "epochs": 15
+  },
+  "router": {
+    "acc": 0.7673,
+    "params": 268725,
+    "epochs": 15
+  },
+  "switch_moe": {
+    "acc": 0.6537,
+    "params": 764650,
+    "epochs": 5
+  },
+  "conclusion": "On homogeneous digit photos, per-layer routing does NOT beat the best static path (conv5 0.8047 vs router 0.7673); coarse MoE switch collapses (0.6537). Routing advantage appears on heterogeneous data (sarcos_routing.json)."
+}

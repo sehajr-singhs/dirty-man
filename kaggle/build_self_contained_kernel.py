@@ -21,6 +21,8 @@ FILES = [
     "training_intervention.py",
     "flagship_regime_routing.py",
     "flagship_discovered_law.py",
+    "nonstatic_layers.py",
+    "run_ns_sweep.py",
 ]
 
 BOILERPLATE_HEAD = '''"""The Dirty Man — headline experiments, self-contained (Kaggle GPU).
@@ -113,11 +115,17 @@ if __name__ == "__main__":
          lambda: (__import__("flagship_discovered_law").main(
              n_traj=400, epochs=800, n_test=200, test_steps=100)))
 
+    _run("NON-STATIC LAYERS: per-sample program routing on real SVHN photos",
+         lambda: (__import__("run_ns_sweep").main(
+             ["--n-train", "20000", "--n-test", "6000",
+              "--static-epochs", "8", "--router-epochs", "10",
+              "--switch-epochs", "5"])))
+
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
     for f in ["protocol_a.json", "protocol_c.json", "protocol_e.json",
               "training_intervention.json", "flagship_regime_routing.json",
-              "flagship_discovered_law.json"]:
+              "flagship_discovered_law.json", "nonstatic_svhn.json"]:
         p = os.path.join("results", f)
         if os.path.exists(p):
             print(f"  {p}  ({os.path.getsize(p)} bytes)", flush=True)

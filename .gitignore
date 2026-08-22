@@ -15,3 +15,5 @@ results/bank_*
 
 # downloaded datasets (MNIST is fetched on demand by dirty_man/data_mnist.py)
 data/
+data_svhn/
+data_fm/
