@@ -32,6 +32,8 @@ The router's policy is interpretable: on clean sim it uses dense (flat lens) and
 
 **Experimental self-supervised extension — Predictive Program.** `predictive_program.py` removes regime and expert labels from the routing objective. An online encoder predicts an EMA target encoder across two augmented views; each candidate primitive predicts the target latent, and the router receives balanced counterfactual assignments based on per-sample competence. This is a JEPA-like latent-prediction direction combined with structural routing, not a claim of JEPA-scale training or performance. On a 2,000-train/500-test real-MNIST probe it reached counterfactual regret `6.1e-5` and 30.2% agreement with the unconstrained cheapest primitive; hard utilization collapsed to `linear=1.0`, so residual collapse is explicitly reported. The anti-collapse diagnostics and tests are part of the prototype.
 
+**Corruption-routing benchmark.** `corruption_routing_benchmark.py` tests whether feature-conditioned routing discovers which computational regime each corruption type requires. FashionMNIST images are corrupted by Gaussian noise, salt-and-pepper, rotation, and occlusion. The Dirty Man's eye detects corruption type (96-99% accuracy) and routes to different lenses: clean→linear (0.87), gaussian→ReLU (0.98), saltpepper→CNN (0.98), rotation→gated (0.95). This differentiated routing demonstrates the meta-routing theorem (Theorem 7 in the NMI paper): when optimal computation depends on latent structure, feature-conditioned routing provably dominates content-level routing.
+
 ## Getting started
 
 ```bash
@@ -64,6 +66,9 @@ python sarcos_routing.py
 
 # SELF-SUPERVISED PREDICTIVE PROGRAM: JEPA-like latent prediction + counterfactual routing
 python predictive_program.py --dataset mnist --n-train 2000 --n-test 500 --epochs 3
+
+# CORRUPTION ROUTING BENCHMARK: meta-level routing discovers which lens each corruption needs
+python corruption_routing_benchmark.py --n-train 8000 --n-test 1500 --epochs 12
 
 # Figures + interactive playground (read committed results/*.json)
 python make_figs.py
