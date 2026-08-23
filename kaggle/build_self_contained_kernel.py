@@ -25,6 +25,8 @@ FILES = [
     "run_ns_sweep.py",
     "sarcos_routing.py",
     "predictive_program.py",
+    "switchyard_vs_moe.py",
+    "corruption_routing_benchmark.py",
 ]
 
 BOILERPLATE_HEAD = '''"""The Dirty Man — headline experiments, self-contained (Kaggle GPU).
@@ -133,12 +135,21 @@ if __name__ == "__main__":
              "--dataset", "mnist", "--n-train", "6000", "--n-test", "2000",
              "--epochs", "10", "--device", "auto"])))
 
+    _run("SWITCHYARD VS MOE: feature-conditioned vs content routing",
+         lambda: (__import__("switchyard_vs_moe").run_comparison(
+             n_train=4000, n_test=1000, epochs=15, severity=1.0, seed=0)))
+
+    _run("CORRUPTION ROUTING: meta-level vs content-level routing",
+         lambda: (__import__("corruption_routing_benchmark").main(
+             ["--n-train", "6000", "--n-test", "2000", "--epochs", "12"])))
+
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
     for f in ["protocol_a.json", "protocol_c.json", "protocol_e.json",
               "training_intervention.json", "flagship_regime_routing.json",
               "flagship_discovered_law.json", "nonstatic_svhn.json",
-              "sarcos_routing.json", "predictive_program.json"]:
+              "sarcos_routing.json", "predictive_program.json",
+              "switchyard_vs_moe.json", "corruption_routing.json"]:
         p = os.path.join("results", f)
         if os.path.exists(p):
             print(f"  {p}  ({os.path.getsize(p)} bytes)", flush=True)
