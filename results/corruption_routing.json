@@ -1,0 +1,144 @@
+{
+  "experiment": "corruption_routing_benchmark",
+  "corruption_types": [
+    "clean",
+    "gaussian",
+    "saltpepper",
+    "rotation",
+    "occlusion"
+  ],
+  "config": {
+    "n_train": 4000,
+    "n_test": 1000,
+    "epochs": 8,
+    "seed": 0
+  },
+  "static_mlp": {
+    "train_acc": 0.8105,
+    "per_corruption_acc": {
+      "clean": 0.794,
+      "gaussian": 0.795,
+      "saltpepper": 0.776,
+      "rotation": 0.7,
+      "occlusion": 0.751
+    },
+    "routing_policy": null,
+    "params": 118282,
+    "type": "static_mlp",
+    "time_s": 21.3
+  },
+  "static_cnn": {
+    "train_acc": 0.8512,
+    "per_corruption_acc": {
+      "clean": 0.824,
+      "gaussian": 0.818,
+      "saltpepper": 0.806,
+      "rotation": 0.749,
+      "occlusion": 0.767
+    },
+    "routing_policy": null,
+    "params": 50186,
+    "type": "static_cnn",
+    "time_s": 39.5
+  },
+  "moe": {
+    "train_acc": 0.805,
+    "per_corruption_acc": {
+      "clean": 0.799,
+      "gaussian": 0.808,
+      "saltpepper": 0.794,
+      "rotation": 0.7,
+      "occlusion": 0.75
+    },
+    "routing_policy": null,
+    "params": 630162,
+    "type": "moe",
+    "time_s": 46.3
+  },
+  "dynamicdepth": {
+    "train_acc": 0.8085,
+    "per_corruption_acc": {
+      "clean": 0.804,
+      "gaussian": 0.807,
+      "saltpepper": 0.792,
+      "rotation": 0.705,
+      "occlusion": 0.754
+    },
+    "routing_policy": null,
+    "params": 137374,
+    "type": "dynamicdepth",
+    "time_s": 22.4
+  },
+  "adaptive": {
+    "train_acc": 0.8087,
+    "per_corruption_acc": {
+      "clean": 0.799,
+      "gaussian": 0.796,
+      "saltpepper": 0.781,
+      "rotation": 0.693,
+      "occlusion": 0.74
+    },
+    "routing_policy": null,
+    "params": 168334,
+    "type": "adaptive",
+    "time_s": 23.6
+  },
+  "dirtyman": {
+    "train_acc": 0.7658,
+    "per_corruption_acc": {
+      "clean": 0.759,
+      "gaussian": 0.718,
+      "saltpepper": 0.722,
+      "rotation": 0.698,
+      "occlusion": 0.698
+    },
+    "routing_policy": {
+      "clean": {
+        "lens_0": 0.9067,
+        "lens_1": 0.0043,
+        "lens_2": 0.004,
+        "lens_3": 0.085
+      },
+      "gaussian": {
+        "lens_0": 0.0,
+        "lens_1": 0.9846,
+        "lens_2": 0.0154,
+        "lens_3": 0.0
+      },
+      "saltpepper": {
+        "lens_0": 0.0,
+        "lens_1": 0.0187,
+        "lens_2": 0.9813,
+        "lens_3": 0.0
+      },
+      "rotation": {
+        "lens_0": 0.0505,
+        "lens_1": 0.0025,
+        "lens_2": 0.0,
+        "lens_3": 0.947
+      },
+      "occlusion": {
+        "lens_0": 0.9889,
+        "lens_1": 0.0,
+        "lens_2": 0.006,
+        "lens_3": 0.0051
+      }
+    },
+    "params": 467039,
+    "corruption_classifier_acc": {
+      "clean": 0.052,
+      "gaussian": 0.96,
+      "saltpepper": 0.995,
+      "rotation": 0.944,
+      "occlusion": 0.988
+    },
+    "lens_params": {
+      "lens_0": 75360,
+      "lens_1": 13048,
+      "lens_2": 20148,
+      "lens_3": 150720
+    },
+    "type": "dirtyman",
+    "time_s": 119.2
+  }
+}

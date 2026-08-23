@@ -9,14 +9,14 @@
     {
       "epoch": 1,
       "tau": 1.5,
-      "loss": 0.56276,
-      "latent_loss": 0.005915,
-      "selected_loss": 0.00772,
-      "route_loss": 1.106898,
-      "balance_loss": 0.002252,
-      "confidence": 0.575692,
-      "route_acc": 0.3395,
-      "raw_best_acc": 0.3365,
+      "loss": 0.339743,
+      "selected_loss": 0.007517,
+      "route_loss": 1.107396,
+      "balance_loss": 0.002016,
+      "diversity": -0.004627,
+      "confidence": 0.575469,
+      "route_acc": 0.341,
+      "raw_best_acc": 0.342,
       "pseudo_utilization": {
         "linear": 0.336,
         "mlp": 0.336,
@@ -25,15 +25,15 @@
     },
     {
       "epoch": 2,
-      "tau": 0.925,
-      "loss": 0.552128,
-      "latent_loss": 0.000771,
-      "selected_loss": 0.000672,
-      "route_loss": 1.101785,
-      "balance_loss": 0.007422,
-      "confidence": 1.0,
-      "route_acc": 0.3285,
-      "raw_best_acc": 0.3405,
+      "tau": 1.3316,
+      "loss": 0.331205,
+      "selected_loss": 0.000571,
+      "route_loss": 1.101882,
+      "balance_loss": 0.001759,
+      "diversity": -0.000921,
+      "confidence": 0.597337,
+      "route_acc": 0.3125,
+      "raw_best_acc": 0.326,
       "pseudo_utilization": {
         "linear": 0.336,
         "mlp": 0.336,
@@ -42,15 +42,49 @@
     },
     {
       "epoch": 3,
-      "tau": 0.35,
-      "loss": 0.549993,
-      "latent_loss": 0.000192,
-      "selected_loss": 0.000159,
-      "route_loss": 1.098874,
-      "balance_loss": 0.006984,
+      "tau": 0.925,
+      "loss": 0.32997,
+      "selected_loss": 0.000135,
+      "route_loss": 1.099076,
+      "balance_loss": 0.002319,
+      "diversity": -0.000205,
+      "confidence": 0.66825,
+      "route_acc": 0.3235,
+      "raw_best_acc": 0.3205,
+      "pseudo_utilization": {
+        "linear": 0.336,
+        "mlp": 0.336,
+        "gated": 0.328
+      }
+    },
+    {
+      "epoch": 4,
+      "tau": 0.5184,
+      "loss": 0.330033,
+      "selected_loss": 6.6e-05,
+      "route_loss": 1.098961,
+      "balance_loss": 0.005595,
+      "diversity": -9e-05,
       "confidence": 1.0,
-      "route_acc": 0.3365,
-      "raw_best_acc": 0.3125,
+      "route_acc": 0.309,
+      "raw_best_acc": 0.3235,
+      "pseudo_utilization": {
+        "linear": 0.336,
+        "mlp": 0.336,
+        "gated": 0.328
+      }
+    },
+    {
+      "epoch": 5,
+      "tau": 0.35,
+      "loss": 0.330062,
+      "selected_loss": 8.8e-05,
+      "route_loss": 1.098376,
+      "balance_loss": 0.009272,
+      "diversity": -0.000106,
+      "confidence": 1.0,
+      "route_acc": 0.319,
+      "raw_best_acc": 0.334,
       "pseudo_utilization": {
         "linear": 0.336,
         "mlp": 0.336,
@@ -59,15 +93,15 @@
     }
   ],
   "metrics": {
-    "counterfactual_best_mse": 8.9e-05,
-    "balanced_assignment_accuracy": 0.336,
-    "route_to_counterfactual_best": 0.302,
-    "routing_regret": 6.1e-05,
+    "counterfactual_best_mse": 3.9e-05,
+    "balanced_assignment_accuracy": 0.498,
+    "route_to_counterfactual_best": 0.546,
+    "routing_regret": 8.7e-05,
     "utilization": {
-      "linear": 1.0,
-      "mlp": 0.0,
+      "linear": 0.834,
+      "mlp": 0.166,
       "gated": 0.0
     },
-    "utilization_entropy": 0.0
+    "utilization_entropy": 0.449487
   }
 }

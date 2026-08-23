@@ -95,35 +95,42 @@ class PredictiveProgram(nn.Module):
             target = self.target(view_b)
         candidates = self.predictors(context)             # (B, E, D)
         counterfactual = ((candidates - target[:, None, :]) ** 2).mean(-1)
-        # A raw argmin is not enough: when one predictor is slightly easier,
-        # it wins every sample and the router appears accurate while learning
-        # no conditional computation. Balanced assignments make specialization
-        # compete on counterfactual competence rather than popularity.
+        # Competitive assignment: each sample goes to its lowest-error
+        # predictor, balanced to prevent collapse. Only the assigned
+        # predictor receives gradient for that sample.
         pseudo = balanced_assignments(counterfactual.detach())
+        # Select the assigned predictor's output ONLY (hard, not soft)
+        selected = candidates[torch.arange(candidates.size(0)), pseudo]
+        # Prediction loss ONLY on the selected predictor per sample.
+        # This creates specialization: each predictor improves on its
+        # own samples, creating a positive feedback loop.
+        selected_loss = F.mse_loss(selected, target)
+        # Router learns to predict assignments from context
         logits = self.router(context)
+        route_loss = F.cross_entropy(logits, pseudo)
+        # Output diversity: push predictor outputs apart (L2 distance)
+        # so they genuinely specialize rather than converge to the same thing.
+        diffs = (candidates[:, :, None, :] - candidates[:, None, :, :]) ** 2
+        diversity = -diffs.mean()  # negative, so minimizing loss = maximizing diversity
         if self.training:
             probs = F.gumbel_softmax(logits, tau=tau, hard=hard, dim=-1)
         else:
             probs = F.softmax(logits / max(tau, 1e-3), dim=-1)
-        routed = (probs.unsqueeze(-1) * candidates).sum(1)
-        latent_loss = F.mse_loss(routed, target)
-        selected_loss = counterfactual.gather(1, pseudo[:, None]).mean()
-        route_loss = F.cross_entropy(logits, pseudo)
         hard_assign = probs.detach().argmax(-1)
         frac = F.one_hot(hard_assign, len(OPS)).float().mean(0)
         mean_p = probs.mean(0)
-        # KL(mean route distribution || uniform), minimized at non-collapse.
         balance_loss = (mean_p.clamp_min(1e-8) *
                         (mean_p.clamp_min(1e-8) * len(OPS)).log()).sum()
         confidence = probs.max(-1).values.mean()
         route_acc = (hard_assign == pseudo).float().mean()
+        loss = (selected_loss + 0.3 * route_loss + 0.05 * balance_loss
+                + 0.02 * diversity)
         return {
-            "loss": (selected_loss + 0.25 * latent_loss + 0.5 * route_loss
-                     + 0.05 * balance_loss),
-            "latent_loss": latent_loss.detach(),
+            "loss": loss,
             "selected_loss": selected_loss.detach(),
             "route_loss": route_loss.detach(),
             "balance_loss": balance_loss.detach(),
+            "diversity": diversity.detach(),
             "counterfactual": counterfactual.detach(),
             "pseudo": pseudo.detach(),
             "probs": probs,
@@ -210,8 +217,9 @@ def train(model, dataset, epochs=10, batch=128, device="cpu", seed=0):
     history = []
     for epoch in range(epochs):
         model.train()
-        sums = {"loss": 0.0, "latent_loss": 0.0, "selected_loss": 0.0,
+        sums = {"loss": 0.0, "selected_loss": 0.0,
                 "route_loss": 0.0, "balance_loss": 0.0,
+                "diversity": 0.0,
                 "confidence": 0.0, "route_acc": 0.0,
                 "raw_best_acc": 0.0}
         pseudo_counts = torch.zeros(len(OPS), dtype=torch.float64)
@@ -232,6 +240,8 @@ def train(model, dataset, epochs=10, batch=128, device="cpu", seed=0):
                 if key == "raw_best_acc":
                     value = (result["probs"].detach().argmax(-1) ==
                              result["counterfactual"].detach().argmin(-1)).float().mean()
+                elif key == "diversity":
+                    value = result.get("diversity", torch.tensor(0.0))
                 else:
                     value = result[key].detach() if torch.is_tensor(result[key]) else result[key]
                 sums[key] += float(value) * n
