@@ -139,9 +139,17 @@ if __name__ == "__main__":
          lambda: (__import__("switchyard_vs_moe").run_comparison(
              n_train=4000, n_test=1000, epochs=15, severity=1.0, seed=0)))
 
-    _run("CORRUPTION ROUTING: meta-level vs content-level routing",
-         lambda: (__import__("corruption_routing_benchmark").main(
-             ["--n-train", "6000", "--n-test", "2000", "--epochs", "12"])))
+    _run("CORRUPTION ROUTING: meta-level vs content-level routing on FashionMNIST",
+         lambda: (__import__("corruption_routing_benchmark").run_benchmark(
+             n_train=30000, n_test=5000, epochs=12, seed=0)))
+
+    _run("HETEROGENEITY SCALING: routing advantage grows with corruption diversity",
+         lambda: (__import__("corruption_routing_benchmark").run_heterogeneity_scaling(
+             n_train=10000, n_test=2000, epochs=8, seed=0)))
+
+    _run("ROUTING STABILITY: Theorem 7 quantified — MoE degrades, Dirty Man stays stable",
+         lambda: (__import__("switchyard_vs_moe").run_experiment(
+             n_train=3000, n_test=800, pretrain_epochs=10, router_epochs=10, seed=0)))
 
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
