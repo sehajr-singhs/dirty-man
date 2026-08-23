@@ -72,6 +72,9 @@ python predictive_program.py --dataset mnist --n-train 2000 --n-test 500 --epoch
 # CORRUPTION ROUTING BENCHMARK: meta-level routing discovers which lens each corruption needs
 python corruption_routing_benchmark.py --n-train 8000 --n-test 1500 --epochs 12
 
+# SWITCHYARD vs MoE: routing stability test — proves Theorem 7 (meta routing is noise-stable)
+python switchyard_vs_moe.py --n-train 1500 --n-test 500 --pretrain-epochs 5 --router-epochs 5
+
 # Figures + interactive playground (read committed results/*.json)
 python make_figs.py
 python make_playground.py
