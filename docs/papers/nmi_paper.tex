@@ -951,6 +951,29 @@ detects where a learner is out of its depth and changes which computation
 handles the input. Full results in
 \texttt{results/training\_intervention.json}.
 
+\subsection{Exploratory self-supervised predictive programs}
+\label{sec:predictive}
+
+The architecture also admits a label-free routing objective. In the exploratory
+Predictive Program, two augmented views are passed through an online encoder
+and an exponential-moving-average target encoder. Each candidate predictor
+attempts to predict the target latent; the router is trained from detached,
+balanced counterfactual assignments to the lowest-error predictor in each
+sample. This is a JEPA-like latent-prediction direction, but it is deliberately
+reported as a prototype rather than as a JEPA-scale comparison.
+
+On a real-MNIST probe (2{,}000 training and 500 test images, three epochs, one
+seed), the method reached counterfactual regret $6.1\times10^{-5}$ and 30.2\%
+agreement with the unconstrained cheapest predictor. The balanced assignment
+policy remained uniform by construction, while hard deployment collapsed to
+the linear predictor (1.0 utilization).
+This gap between low regret and utilization skew is an important diagnostic:
+latent prediction can be useful while the learned structural policy still
+collapses. We therefore do not include this probe in the headline comparison;
+multiple seeds, compute-matched static predictors, stronger augmentations, and
+larger natural-image data are required before making a self-supervised claim.
+The implementation and tests are in \texttt{predictive\_program.py}.
+
 \section{Related work}
 \label{sec:related}
 

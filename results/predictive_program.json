@@ -1,0 +1,73 @@
+{
+  "experiment": "self_supervised_predictive_program",
+  "dataset": "mnist",
+  "objective": "latent prediction with counterfactual routing",
+  "seed": 0,
+  "device": "cpu",
+  "params": 157379,
+  "history": [
+    {
+      "epoch": 1,
+      "tau": 1.5,
+      "loss": 0.56276,
+      "latent_loss": 0.005915,
+      "selected_loss": 0.00772,
+      "route_loss": 1.106898,
+      "balance_loss": 0.002252,
+      "confidence": 0.575692,
+      "route_acc": 0.3395,
+      "raw_best_acc": 0.3365,
+      "pseudo_utilization": {
+        "linear": 0.336,
+        "mlp": 0.336,
+        "gated": 0.328
+      }
+    },
+    {
+      "epoch": 2,
+      "tau": 0.925,
+      "loss": 0.552128,
+      "latent_loss": 0.000771,
+      "selected_loss": 0.000672,
+      "route_loss": 1.101785,
+      "balance_loss": 0.007422,
+      "confidence": 1.0,
+      "route_acc": 0.3285,
+      "raw_best_acc": 0.3405,
+      "pseudo_utilization": {
+        "linear": 0.336,
+        "mlp": 0.336,
+        "gated": 0.328
+      }
+    },
+    {
+      "epoch": 3,
+      "tau": 0.35,
+      "loss": 0.549993,
+      "latent_loss": 0.000192,
+      "selected_loss": 0.000159,
+      "route_loss": 1.098874,
+      "balance_loss": 0.006984,
+      "confidence": 1.0,
+      "route_acc": 0.3365,
+      "raw_best_acc": 0.3125,
+      "pseudo_utilization": {
+        "linear": 0.336,
+        "mlp": 0.336,
+        "gated": 0.328
+      }
+    }
+  ],
+  "metrics": {
+    "counterfactual_best_mse": 8.9e-05,
+    "balanced_assignment_accuracy": 0.336,
+    "route_to_counterfactual_best": 0.302,
+    "routing_regret": 6.1e-05,
+    "utilization": {
+      "linear": 1.0,
+      "mlp": 0.0,
+      "gated": 0.0
+    },
+    "utilization_entropy": 0.0
+  }
+}

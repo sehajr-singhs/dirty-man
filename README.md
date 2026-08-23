@@ -28,7 +28,9 @@ input ──► primitive_2 ────────┴──► bottleneck ─�
 
 **Non-static layers on real robot dynamics — routing *inside* the network.** The sharpest form of the thesis isn't switching between whole networks (that's MoE) but routing *inside* one network: at every depth a router selects the primitive *layer* for *that* sample, so each input walks its own program of computation. On **SARCOS** — real 7-DOF robot-arm telemetry (44,484 train → 7 torques) — a first routed pilot reaches 0.0185 vs 0.0198 NMSE for the reported fixed-path pilot (−6.4%), and its choice is physically interpretable: it routes slow configurations to the linear lens (‖q̇‖ = 1.62) and fast ones to the nonlinear lens (‖q̇‖ = 2.56). The code now supports matched epoch budgets, full fixed-path grids, and velocity-quantile error reports; the committed number is not yet a multi-seed claim. On SVHN (real street photos) it also runs per-sample programs, but loses to the best fixed conv5 path. See `sarcos_routing.py` and `nonstatic_layers.py`.
 
-The router's policy is interpretable: on clean sim it uses dense (flat lens) and cnn; as corruption grows it abandons dense and shifts to relu/cnn (spatial lenses). On real handwritten digits it routes to cnn/dense — it has learned to identify which lens the input needs. The NMI paper (`docs/papers/nmi_paper.tex`) includes a theory section with five theorems: oracle-supervised routing learns the regime policy (VC-dimension bound), structural adaptation needs fewer labels than weight adaptation (sample-complexity bound), the shared bottleneck keeps switching geometry-continuous, a **single-map separation bound** — a fixed map must mis-represent at least one law by half the per-step energy gap, while routing drives the gap to zero — and a **scaling bound** — a single map's error is bounded below by a constant independent of the number of laws, while routing's error decays with router accuracy, so more laws hurt one map, not routing.
+The router's policy is interpretable: on clean sim it uses dense (flat lens) and cnn; as corruption grows it abandons dense and shifts to relu/cnn (spatial lenses). On real handwritten digits it routes to cnn/dense — it has learned to identify which lens the input needs.
+
+**Experimental self-supervised extension — Predictive Program.** `predictive_program.py` removes regime and expert labels from the routing objective. An online encoder predicts an EMA target encoder across two augmented views; each candidate primitive predicts the target latent, and the router receives balanced counterfactual assignments based on per-sample competence. This is a JEPA-like latent-prediction direction combined with structural routing, not a claim of JEPA-scale training or performance. On a 2,000-train/500-test real-MNIST probe it reached counterfactual regret `6.1e-5` and 30.2% agreement with the unconstrained cheapest primitive; hard utilization collapsed to `linear=1.0`, so residual collapse is explicitly reported. The anti-collapse diagnostics and tests are part of the prototype.
 
 ## Getting started
 
@@ -60,6 +62,9 @@ python nonstatic_layers.py --model router --epochs 15
 # REAL ROBOT: per-depth routing on SARCOS inverse dynamics
 python sarcos_routing.py
 
+# SELF-SUPERVISED PREDICTIVE PROGRAM: JEPA-like latent prediction + counterfactual routing
+python predictive_program.py --dataset mnist --n-train 2000 --n-test 500 --epochs 3
+
 # Figures + interactive playground (read committed results/*.json)
 python make_figs.py
 python make_playground.py
@@ -82,6 +87,7 @@ flagship_regime_routing.py  THE FLAGSHIP: a single map cannot obey two laws; rou
 flagship_discovered_law.py  DISCOVERED-LAW FLAGSHIP: learned specialists, no hardcoded physics + scaling curve
 nonstatic_layers.py  NON-STATIC LAYERS: per-sample, per-depth program routing on real SVHN photos
 sarcos_routing.py    REAL ROBOT: per-depth routing on SARCOS inverse dynamics (interpretable lens selection)
+predictive_program.py  EXPERIMENTAL: self-supervised latent prediction + counterfactual routing
 run_experiments.py    protocols A–E, staged training, checkpoint/resume, result JSONs
 make_figs.py          figures 1–8 from results/*.json (nothing hard-coded)
 make_playground.py    docs/playground.html from results/playground.json
@@ -115,6 +121,7 @@ Digits 0–9 are rendered procedurally as anti-aliased parametric strokes in 24�
 - The training-time intervention is a proof of concept on pendulum dynamics; scaling it to real training loops is future work.
 - The discovered-law flagship replaces hardcoded experts with learned specialists on exact physics skeletons; the remaining simplification is that the *skeleton* itself (the known (g/L) sin θ torque) is still supplied. Learning the skeleton from data — full discovery of both law and structure — is the direct next step.
 - The staged training protocol and temperature schedule are delicate; hyperparameters were tuned for this benchmark.
+- Predictive Program is an experimental extension, not yet a competitive JEPA or foundation-model result. Its current real-MNIST probe has low counterfactual regret but still routes predominantly to one predictor; multi-seed comparisons, stronger augmentations, and compute-matched baselines are required.
 
 ## Papers
 

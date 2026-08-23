@@ -24,6 +24,7 @@ FILES = [
     "nonstatic_layers.py",
     "run_ns_sweep.py",
     "sarcos_routing.py",
+    "predictive_program.py",
 ]
 
 BOILERPLATE_HEAD = '''"""The Dirty Man — headline experiments, self-contained (Kaggle GPU).
@@ -127,12 +128,17 @@ if __name__ == "__main__":
              ["--static-epochs", "30", "--routed-epochs", "30",
               "--device", "auto"])))
 
+    _run("PREDICTIVE PROGRAM: self-supervised counterfactual routing",
+         lambda: (__import__("predictive_program").main([
+             "--dataset", "mnist", "--n-train", "6000", "--n-test", "2000",
+             "--epochs", "10", "--device", "auto"])))
+
     print("=" * 60, flush=True)
     print("ALL DONE — results written to results/*.json", flush=True)
     for f in ["protocol_a.json", "protocol_c.json", "protocol_e.json",
               "training_intervention.json", "flagship_regime_routing.json",
               "flagship_discovered_law.json", "nonstatic_svhn.json",
-              "sarcos_routing.json"]:
+              "sarcos_routing.json", "predictive_program.json"]:
         p = os.path.join("results", f)
         if os.path.exists(p):
             print(f"  {p}  ({os.path.getsize(p)} bytes)", flush=True)

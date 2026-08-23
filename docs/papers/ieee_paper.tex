@@ -150,6 +150,17 @@ The flagship routes between \emph{whole networks}, but switching whole networks 
 
 We measure this on \textbf{SVHN} --- 73{,}257 real street-view photographs of house numbers, a real-world domain with zero overlap with the glyph renderer --- and on \textbf{SARCOS}, 44{,}484 real telemetry records of a 7-DOF robot arm (inverse dynamics: joint positions/velocities/accelerations to torques). On SVHN, the routed program reaches 0.767, below the best fixed conv5 path at 0.805; this is the homogeneous-data boundary case. On SARCOS, the routed program reaches 0.0185 NMSE versus 0.0198 for the reported fixed-path pilot, with an interpretable speed-correlated policy: linear on slower configurations and nonlinear on faster ones. The comparison is a pilot rather than a universal superiority claim; a submission-grade result should repeat SARCOS across seeds with the matched epoch budget and report speed-stratified confidence intervals.
 
+\subsection{Exploratory self-supervised predictive program}
+The label-free extension in \texttt{predictive\_program.py} replaces regime
+labels with counterfactual competence. An online encoder predicts an EMA target
+latent across two augmented views; candidate predictors are scored per sample,
+and balanced pseudo-assignments train the router. On a 2{,}000/500 real-MNIST
+probe (three epochs, one seed), counterfactual regret was $6.1\times10^{-5}$
+and agreement with the unconstrained cheapest predictor was 30.2\%. Hard
+utilization nevertheless collapsed to one predictor (linear 1.0), so
+this is an exploratory JEPA-like direction with an explicit collapse diagnostic,
+not a competitive self-supervised benchmark.
+
 \section{Related Work}
 Mixture-of-experts \cite{switchtransformer,condcomp} routes tokens to parallel experts; we add visual-cue+goal routing, oracle-supervised staged training, and per-depth per-sample program routing (non-static layers). Dynamic networks \cite{dynamicnn} change depth/width/skips; we switch the family of computation. NAS \cite{nas} searches one structure per dataset at heavy cost; we switch per sample at inference. RepVGG \cite{repvgg} folds branches at inference; we keep them live. Sim-to-real \cite{domainrand,sim2real} adapts weights or renders domains; we show structure adaptation is more parameter-efficient.
 

@@ -710,6 +710,26 @@
   </div>
 </section>
 
+<!-- ================= EXPERIMENTAL PREDICTIVE PROGRAM ================= -->
+<section class="section" style="border-top: 1px solid #eee;">
+  <div class="container">
+    <h2 class="title">Experimental: predictive programs without routing labels</h2>
+    <div class="content has-text-justified">
+      <p>The next direction combines the Dirty Man with a JEPA-like latent objective. Two augmented views pass
+        through an online/EMA encoder pair; three candidate predictors compete to predict the target latent, and
+        the router is trained from balanced counterfactual competence rather than regime or expert labels.</p>
+      <p>On a 2,000-train/500-test real-MNIST probe, counterfactual regret was <strong>6.1&times;10<sup>&minus;5</sup></strong>
+        and agreement with the unconstrained cheapest predictor was 30.2%. The balanced pseudo-policy covered
+        all predictors, but hard deployment collapsed to linear (1.0 utilization). That is the useful
+        scientific result at this stage: low prediction regret does not prove that a non-static policy has
+        learned meaningful specialization. The collapse diagnostic is therefore part of the release, and this
+        prototype is not presented as a competitive JEPA or foundation model.</p>
+      <p>Run it with <code>python predictive_program.py --dataset mnist --n-train 2000 --n-test 500 --epochs 3</code>.
+        The implementation, JSON output, and anti-collapse tests are included in the repository.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ================= RELATED ================= -->
 <section class="section" style="border-top: 1px solid #eee;">
   <div class="container">
@@ -748,6 +768,7 @@ python run_experiments.py --only D --seeds 3       # ablations
 python run_experiments.py --only E --seeds 3       # real MNIST (zero synthetic overlap)
 python flagship_regime_routing.py                  # THE FLAGSHIP: no single net, routing does
 python training_intervention.py                    # training-time intervention (physics)
+python predictive_program.py --dataset mnist --n-train 2000 --n-test 500 --epochs 3
 python make_figs.py                                # figures 1-8 (reads results/*.json)
 python -m pytest tests/ -q                         # sanity tests</pre>
     <div class="content has-text-justified">
