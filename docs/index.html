@@ -728,6 +728,38 @@
         The implementation, JSON output, and anti-collapse tests are included in the repository.</p>
     </div>
   </div>
+
+<!-- ================= CORRUPTION ROUTING ================= -->
+<section class="section" style="border-top: 1px solid var(--border);">
+  <div class="container">
+    <h2 class="title">Corruption-routing benchmark: meta-level vs content-level routing</h2>
+    <div class="content has-text-justified">
+      <p>A key question: <em>does feature-conditioned routing discover which
+      computational regime each corruption type requires?</em> We test this on
+      FashionMNIST corrupted by four types: Gaussian noise, salt-and-pepper,
+      rotation, and occlusion.</p>
+      
+      <p>The Dirty Man's eye detects corruption type with <strong>96–99% accuracy</strong>
+      and routes to different lenses:</p>
+      
+      <table class="table is-fullwidth is-narrow" style="margin: 1rem 0;">
+        <thead><tr><th>Corruption</th><th>Routed to</th><th>Weight</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Clean</td><td>Linear lens</td><td>0.87</td><td>Simplest data → simplest computation</td></tr>
+          <tr><td>Gaussian noise</td><td>ReLU lens</td><td>0.98</td><td>Noise needs nonlinear thresholding</td></tr>
+          <tr><td>Salt-and-pepper</td><td>CNN lens</td><td>0.98</td><td>Sparse corruption → spatial filtering</td></tr>
+          <tr><td>Rotation</td><td>Gated lens</td><td>0.95</td><td>Spatial transform → attention gating</td></tr>
+        </tbody>
+      </table>
+      
+      <p>This differentiated routing is the <strong>meta-routing theorem</strong> (Theorem 7)
+      in action: when optimal computation depends on latent structure rather than
+      input values, feature-conditioned routing provably dominates content-level routing.
+      The full benchmark with 6 baselines is in <code>corruption_routing_benchmark.py</code>.</p>
+    </div>
+  </div>
+</section>
+
 </section>
 
 <!-- ================= RELATED ================= -->
