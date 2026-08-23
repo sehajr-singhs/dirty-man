@@ -472,31 +472,25 @@
       <h2 class="title">Abstract</h2>
       <div class="content has-text-justified">
         <p>
-          We introduce the <strong>Switch Operator</strong>, a neural architecture that reconfigures its
-          computation per input: a visual-cue <strong>eye</strong> and a <strong>goal pathway</strong> drive a
-          differentiable router that selects among nine neural primitives — linear, dense, ReLU, CNN, RNN,
-          LSTM, GAN, autoencoder, and transformer — each with its own inductive lens and internal layers. Every
-          primitive emits into a shared bottleneck latent space, so switched paths stay geometry-continuous for
-          the downstream head. Routing uses annealed Gumbel-Softmax (soft during training, hard at deployment)
-          and a staged protocol — warm-start primitives, oracle-supervised router training, joint fine-tune —
-          that prevents mixture collapse and yields a <em>readable routing policy</em>. On a procedural
-          sim-to-real glyph benchmark (24&times;24, 3 seeds): (i) one operator reaches <strong>0.834</strong>
-          accuracy, above every fixed network it contains (best static 0.829, best standalone 0.822, static CNN
-          0.789); (ii) zero-shot, it cuts the sim&rarr;real transfer gap from 0.611 to 0.526; (iii) with 200 real
-          labels, <strong>structure adaptation</strong> (router only, 4,659 parameters) reaches 0.475 real /
-          0.9997 sim, beating <strong>weight adaptation</strong> (all weights, 16,330 parameters) at 0.395 /
-          0.984; (iv) goal-conditioned routing yields <strong>7&times; better reconstruction</strong> (0.020 vs
-          0.143 MSE) with no classification loss and a per-goal structure; (v) everything trained on synthetic
-          glyphs transfers zero-shot to <strong>real MNIST handwriting</strong> (0.334 vs 0.313 for the best static
-          network); (vi) ablations of the bottleneck, annealing, eye, and domain-invariance change accuracy by
-          &le;0.001. On a regime-switching pendulum whose governing law changes per trajectory, a single network
-          <strong>cannot</strong> obey two mutually-exclusive laws at once — but the routed system obeys all three,
-          with up to <strong>190&times; lower energy error</strong>. We prove four theorems, including a single-map
-          separation bound: a fixed map mis-represents at least one law by half the per-step energy gap, while
-          routing drives the violation to zero as the router improves. <strong>Changing which network computes is
-          learnable, interpretable, more parameter-efficient than changing how it computes — and does what no
-          single network can.</strong>
-        </p>
+          Fixed-topology networks adjust weights inside a structure chosen before training. We study the
+          complementary axis: <em>adjusting which network computes</em>. The <strong>Switch Operator</strong>
+          rewires its computation per input: a visual-cue <strong>eye</strong> extracts corruption-invariant
+          features; a <strong>goal pathway</strong> encodes the task; and a differentiable router selects, per
+          sample, which of nine structurally heterogeneous primitives should process it. Because the router
+          conditions on <em>eye features</em> rather than input pixels &mdash; <strong>meta routing</strong> &mdash; it is
+          provably stable under corruption (Theorem 7), unlike standard MoE content routing. We formalize this as
+          the <strong>Switchyard</strong>: three architectural axes that distinguish structural adaptation from MoE.
+          On a sim-to-real glyph benchmark: <strong>0.834</strong> accuracy above every fixed network; zero-shot
+          transfer gap 0.611 &rarr; 0.526; structure adaptation (4,659 params) beats weight adaptation (16,330 params)
+          at 0.475 vs 0.395 with 3.5&times; fewer parameters. On <strong>SARCOS real 7-DOF robot-arm telemetry</strong>,
+          per-depth routing reaches 0.0185 NMSE vs 0.0198 for the best fixed path, sorting slow configurations to
+          the linear lens and fast ones to nonlinear lenses. On a regime-switching <strong>pendulum</strong>, every
+          fixed network fails on at least one law, but routing between exact physics harnesses obeys all three with
+          up to <strong>190&times; lower energy error</strong>. The operator also acts as a <strong>training assistant</strong>,
+          detecting energy-conservation failure and routing to a physics expert (16&times; violation reduction). <strong>Eight
+          theorems</strong> establish the mechanism, including meta routing dominance, single-map separation, and
+          scaling bounds. <strong>Changing which network computes is learnable, interpretable, more
+          parameter-efficient than how it computes &mdash; and does what no single network can.</strong></p>
       </div>
     </div>
     <p class="tldr"><strong>TL;DR:</strong> instead of training one fixed network, we train a <em>policy over
