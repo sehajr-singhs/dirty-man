@@ -1,0 +1,130 @@
+{
+  "static_cnn": {
+    "acc": 0.55,
+    "params": 71754
+  },
+  "static_mlp": {
+    "acc": 0.69,
+    "params": 235146
+  },
+  "moe_content_routing": {
+    "overall_acc": 0.7467,
+    "per_corruption_acc": {
+      "clean": 0.7580645084381104,
+      "gaussian": 0.7272727489471436,
+      "saltpepper": 0.6935483813285828,
+      "rotation": 0.7586206793785095,
+      "occlusion": 0.7936508059501648
+    },
+    "routing_policy": {
+      "clean": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "gaussian": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "saltpepper": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "rotation": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "occlusion": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      }
+    },
+    "routing_entropy": {
+      "clean": 0.022400371730327606,
+      "gaussian": 0.0007379517192021012,
+      "saltpepper": 9.446426702197641e-05,
+      "rotation": 0.11893801391124725,
+      "occlusion": 0.0830407589673996
+    },
+    "utilization": {
+      "lens_0": 1.0,
+      "lens_1": 0.0,
+      "lens_2": 0.0,
+      "lens_3": 0.0
+    },
+    "params": 602508
+  },
+  "dirty_man_meta_routing": {
+    "overall_acc": 0.7167,
+    "per_corruption_acc": {
+      "clean": 0.7903226017951965,
+      "gaussian": 0.6909090876579285,
+      "saltpepper": 0.6290322542190552,
+      "rotation": 0.6896551847457886,
+      "occlusion": 0.7777777910232544
+    },
+    "routing_policy": {
+      "clean": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "gaussian": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "saltpepper": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "rotation": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      },
+      "occlusion": {
+        "lens_0": 1.0,
+        "lens_1": 0.0,
+        "lens_2": 0.0,
+        "lens_3": 0.0
+      }
+    },
+    "routing_entropy": {
+      "clean": 1.2916365449200384e-05,
+      "gaussian": 5.0416218755344744e-08,
+      "saltpepper": 2.4524074437870524e-10,
+      "rotation": 6.96092756697908e-05,
+      "occlusion": 3.864468089886941e-05
+    },
+    "utilization": {
+      "lens_0": 1.0,
+      "lens_1": 0.0,
+      "lens_2": 0.0,
+      "lens_3": 0.0
+    },
+    "params": 464465
+  },
+  "key_finding": {
+    "moe_routing_accuracy": 1.0,
+    "dirtyman_routing_accuracy": 1.0,
+    "moe_mean_entropy": 0.045,
+    "dirtyman_mean_entropy": 0.0,
+    "moe_vs_dm_acc": 0.03,
+    "explanation": "MoE routes on input PIXELS \u2014 when corruption changes pixel distribution, routing degrades. Dirty Man routes on EYE FEATURES \u2014 the eye detects corruption TYPE, not pixel values, so routing stays stable. This is meta-routing (Theorem 7): feature-conditioned routing dominates content routing when the optimal computation depends on latent structure."
+  }
+}

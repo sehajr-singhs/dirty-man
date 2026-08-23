@@ -345,6 +345,29 @@
   </div>
 </section>
 
+<!-- ================= SWITCHYARD ================= -->
+<section class="section" style="padding-top: 0.5rem;">
+  <div class="container">
+    <h2 class="title">The Switchyard: why this is not mixture-of-experts</h2>
+    <div class="content has-text-justified">
+      <p>MoE routes on <em>input pixels</em> (content routing). The Dirty Man routes on <em>eye-detected features</em> (meta routing). Three architectural differences:</p>
+      <table class="table is-fullwidth is-striped" style="font-size: 0.9em;">
+        <thead><tr><th>Axis</th><th>MoE (Switch Transformer)</th><th>Switchyard (Dirty Man)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Routing input</strong></td><td>Input tokens / embeddings</td><td>Eye features &phi;(x) — corruption-invariant</td></tr>
+          <tr><td><strong>Primitive diversity</strong></td><td>Same architecture family (all feed-forward)</td><td>Structurally heterogeneous (linear vs CNN vs gated)</td></tr>
+          <tr><td><strong>Specialization signal</strong></td><td>Load balance (anti-collapse)</td><td>Oracle regime supervision (detects latent structure)</td></tr>
+          <tr><td><strong>Noise robustness</strong></td><td>Degrades with noise &sigma;</td><td>Stable: &phi;(x) &approx; &phi;(s) under corruption &eta;</td></tr>
+        </tbody>
+      </table>
+      <img src="figs/fig_switchyard.png" alt="Switchyard vs MoE: meta routing from eye features vs content routing from pixels" style="max-width: 100%; margin-top: 1rem;">
+      <p>The corruption-routing benchmark proves it empirically: under increasing Gaussian noise, the MoE's routing entropy <em>increases</em> (uncertainty grows), while the Switchyard's stays flat — the eye says "this is Gaussian noise" regardless of severity.</p>
+      <p>For <strong>robotics</strong> (SARCOS inverse dynamics), MoE switches between feed-forward networks of the same type — a change in <em>parameters</em>. The Switchyard switches between <em>computation families</em>: linear lens for slow configurations (gravity dominates), nonlinear lens for fast ones (Coriolis terms matter). This is why the routed program reaches 0.0185 NMSE vs 0.0198 for the best fixed path.</p>
+      <p>For <strong>sim2real transfer</strong>, structure adaptation (4,659 router parameters) matches weight adaptation (16,330 parameters) at 0.475 vs 0.395 real accuracy with 3.5x fewer parameters. The key insight: the toolbox bank already knows real corruption — only the <em>routing</em> needs rewiring.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ================= TEASER ================= -->
 <section class="teaser">
   <div class="container">

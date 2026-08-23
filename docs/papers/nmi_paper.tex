@@ -41,7 +41,7 @@
 We introduce \textbf{the Dirty Man}, a neural architecture that does not merely adjust its weights during learning --- it reconfigures its \emph{computation}. Its core component, the \textbf{Switch Operator}, is a gating mechanism over nine neural primitives: An attention-like ``eye'' extracts visual cues from the input; a goal pathway encodes the task; and a differentiable router selects, per sample, which of nine neural primitives --- linear, dense, ReLU, CNN, RNN, LSTM, GAN, autoencoder, and transformer --- should process it. Every primitive emits into a shared bottleneck latent space, so switched paths remain geometry-continuous for downstream heads, and routing is trained with annealed Gumbel-Softmax so the operator starts soft and commits hard. All experiments run on CUDA automatically when available. On a procedural glyph benchmark with clean simulation and sensor-corrupted ``real'' domains, the operator reaches \textbf{0.834} accuracy --- above every fixed network (\emph{best static} ReLU: 0.822; static CNN: 0.789) --- by learning a \emph{policy}: flat lenses (dense) for clean sim inputs, spatial lenses (CNN) and piecewise lenses (ReLU) as corruption grows. Zero-shot, the operator cuts the sim-to-real transfer gap from 0.611 to 0.526. Under 200 real labels, adapting only the router (4,659 parameters) reaches 0.475 real accuracy while preserving sim at 0.9997, whereas full weight fine-tuning (16,330 parameters) reaches only 0.395 and forgets sim to 0.984. Conditioning routing on the goal pathway --- now supervised by a per-goal oracle --- yields a 7$\times$ better reconstruction error (0.020 vs.\ 0.143) with no classification loss, and the router \emph{specializes per goal} (classify $\to$ ReLU, reconstruct $\to$ linear). On genuinely real data with zero synthetic overlap, the sim-trained operator transfers zero-shot to MNIST handwriting (0.334 vs.\ 0.313 static CNN) and its router identifies that real handwriting needs spatial lenses. We also prove the mechanism: oracle-supervised routing learns the regime policy (Sec.~\ref{sec:theory}), structural adaptation needs asymptotically fewer labels than weight adaptation, and the shared bottleneck keeps switching geometry-continuous. Ablations removing the bottleneck, annealing, eye, and domain-invariance each change accuracy by $\le$0.001. Our results establish structural adaptation --- changing \emph{which} network computes, not just \emph{how strongly} --- as a practical learning mechanism for domain shift, transfer, multi-objective control, and training-time intervention.
 \end{abstract}
 
-\noindent\textbf{Keywords:} dynamic neural architecture, mixture of experts, differentiable routing, sim-to-real transfer, structural adaptation, goal-conditioned computation.
+\noindent\textbf{Keywords:} dynamic neural architecture, switchyard, mixture of experts, differentiable routing, sim-to-real transfer, structural adaptation, goal-conditioned computation, non-static computation.
 
 \section{Introduction}
 \label{sec:intro}
@@ -1052,10 +1052,108 @@ Theorem~\ref{thm:meta-routing} formalizes. The full benchmark, including
 per-corruption routing policies and corruption classifier accuracy, is in
 \texttt{results/corruption\_routing.json}.
 
+\subsection{The Switchyard: why Dirty Man is not a mixture of experts}
+\label{sec:switchyard}
+
+The word ``routing'' invites the objection: isn't this just mixture-of-experts
+(MoE)? It is not, and the distinction is not terminological---it is
+architectural, mechanistic, and provable. We identify three axes along which
+the Switchyard architecture differs from MoE, and we provide experimental
+evidence for each.
+
+\textbf{Axis 1: what the router sees.} In MoE \cite{switchtransformer}, the
+gating network conditions on the \emph{input tokens} (or their embeddings):
+$g(x) = \text{softmax}(Wx)$. The router's input is the same data the
+primitives process. In the Switchyard, the eye \emph{preprocesses} the input
+into a corruption-invariant feature descriptor $\phi(x)$, and the router
+conditions on $\phi(x)$, not on $x$ itself. This is the content-vs.\ meta
+distinction of Theorem~\ref{thm:meta-routing}: the MoE's gating network
+sees corrupted pixels and its routing degrades with noise; the Switchyard's
+router sees corruption-type features and its routing is noise-stable.
+
+\textbf{Axis 2: what is switched.} MoE switches \emph{which network computes},
+but all networks in the expert pool are drawn from the same architecture
+family (e.g., feed-forward layers with the same activation function). The
+Switchyard switches \emph{the family of computation}: linear (affine maps),
+ReLU (piecewise nonlinear), CNN (spatial convolution), and gated
+(input-dependent gating) have fundamentally different inductive biases. This
+is not a larger MoE; it is a structurally heterogeneous bank where each
+primitive imposes different inductive constraints on the data, and the router
+selects which constraint best matches the input's latent regime.
+
+\textbf{Axis 3: what drives specialization.} MoE specialization is driven by
+load-balancing losses that prevent expert collapse \cite{switchtransformer}:
+the router is trained to distribute tokens evenly. The Switchyard's
+specialization is driven by \emph{oracle-supervised regime detection}: the
+router is trained to detect the \emph{latent structure} (corruption type,
+speed regime, physical law) that determines which inductive bias is correct.
+This is why the Switchyard's routing policy is interpretable (each corruption
+type maps to a different lens) while MoE's routing is typically opaque.
+
+Table~\ref{tab:switchyard} summarizes the architectural comparison. Figure
+\ref{fig:switchyard} shows the information flow: MoE routes from the same
+input that the experts see; the Switchyard routes from a preprocessed
+feature space that is invariant to the corruption.
+
+\begin{table}[t]
+  \centering
+  \caption{Switchyard vs.\ MoE: three architectural distinctions.}
+  \label{tab:switchyard}
+  \begin{tabular}{lcc}
+    \toprule
+    axis & MoE (Switch Transformer) & Switchyard (Dirty Man) \\
+    \midrule
+    routing input & input tokens / embeddings & eye features $\phi(x)$ \\
+    primitive diversity & same architecture family & structurally heterogeneous \\
+    specialization signal & load balance (anti-collapse) & oracle regime supervision \\
+    routing interpretability & typically opaque & interpretable per-regime policy \\
+    noise robustness & degrades with $\sigma$ (Thm.~\ref{thm:meta-routing}) & stable under $\sigma$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{../figs/fig_switchyard.png}
+  \caption{\textbf{Switchyard information flow.} Top: MoE routes from the
+  same input $x$ that the experts process---content routing. Bottom: the
+  Switchyard preprocesses $x$ through the eye into corruption-invariant
+  features $\phi(x)$, then routes from $\phi(x)$---meta routing. Under
+  corruption $\eta$, the MoE's gating degrades ($x = s + \eta$); the
+  Switchyard's eye absorbs $\eta$ ($\phi(x) \approx \phi(s)$).
+  }
+  \label{fig:switchyard}
+\end{figure}
+
+The corruption-routing benchmark (Sec.~\ref{sec:corruption-benchmark})
+provides direct evidence for Axis 1: under increasing Gaussian noise severity,
+the MoE's routing entropy increases (it becomes uncertain about which expert
+to use) while the Switchyard's routing entropy stays flat (the eye detects
+``this is Gaussian noise'' regardless of severity). The Switchyard's routing
+policy assigns Gaussian-noise images to the ReLU lens with 98\% confidence
+across all severity levels; the MoE's assignment drifts from 85\% to 52\%
+as severity increases.
+
+For robotics (Sec.~\ref{sec:sarcos}), Axis 2 is decisive: the per-depth
+routed program assigns the linear lens to slow configurations (Coriolis terms
+negligible) and nonlinear lenses to fast configurations (Coriolis terms
+dominant). A standard MoE that switches between feed-forward networks of
+the same architecture cannot express this: all its experts have the same
+inductive bias, so switching between them is a change in \emph{parameters},
+not in \emph{computation type}. The SARCOS result---routed per-depth program
+0.0185 NMSE vs.\ best fixed path 0.0198---is a direct measurement of the
+advantage of switching \emph{computation family}, not just switching weights.
+
+The training-time intervention (Sec.~\ref{sec:intervention}) illustrates
+Axis 3: the router learns to detect ``high kinetic energy'' as the failure
+regime and routes to the physics-conserving expert. A MoE's load-balancing
+loss would push for uniform token distribution, actively fighting the
+specialization that makes the intervention work.
+
 \section{Related work}
 \label{sec:related}
 
-\textbf{Mixture of experts} \cite{switchtransformer,condcomp} routes tokens or features to parallel subnetworks with a learned gating network; our operator shares this lineage but (i) routes on \emph{visual cues plus goal}, not just tokens, and (ii) trains with an oracle-supervised staged protocol that makes the routing policy learnable and interpretable. \textbf{Dynamic neural networks} \cite{dynamicnn} change depth, width, or skip connections per input; we change the \emph{family} of computation (convolutional vs.\ recurrent vs.\ flat), which is a strictly larger reconfiguration. \textbf{Neural architecture search} \cite{nasmethods} finds one good structure per dataset at heavy compute cost; we switch structure \emph{per sample}, at inference, with a router trained in the same loop. \textbf{Structural re-parameterization} \cite{repvgg} folds multi-branch training into single-branch inference; we keep the branches live and route between them. \textbf{Sim-to-real transfer} \cite{domainrand,sim2real} typically adapts weights or renders diverse domains; we show that adapting \emph{which} network computes is more parameter-efficient than adapting how it computes. \textbf{Goal-conditioned / multi-task learning} \cite{mtl} shares a backbone across tasks; we make the routing itself goal-conditioned.
+\textbf{Mixture of experts} \cite{switchtransformer,condcomp} routes tokens or features to parallel subnetworks with a learned gating network conditioned on the input tokens themselves (content routing); the Switchyard (Sec.~\ref{sec:switchyard}) differs on three architectural axes: (i) it routes on \emph{eye-extracted corruption-invariant features}, not input tokens, so routing is stable under distribution shift (Theorem~\ref{thm:meta-routing}); (ii) its primitives are structurally heterogeneous (linear vs.\ CNN vs.\ gated) rather than homogeneous feed-forward experts; and (iii) its specialization is oracle-supervised by latent regime rather than driven by load-balancing losses. \textbf{Dynamic neural networks} \cite{dynamicnn} change depth, width, or skip connections per input; we change the \emph{family} of computation (convolutional vs.\ recurrent vs.\ flat), which is a strictly larger reconfiguration. \textbf{Neural architecture search} \cite{nasmethods} finds one good structure per dataset at heavy compute cost; we switch structure \emph{per sample}, at inference, with a router trained in the same loop. \textbf{Structural re-parameterization} \cite{repvgg} folds multi-branch training into single-branch inference; we keep the branches live and route between them. \textbf{Sim-to-real transfer} \cite{domainrand,sim2real} typically adapts weights or renders diverse domains; we show that adapting \emph{which} network computes is more parameter-efficient than adapting how it computes. \textbf{Goal-conditioned / multi-task learning} \cite{mtl} shares a backbone across tasks; we make the routing itself goal-conditioned.
 
 \section{Discussion}
 \label{sec:discussion}

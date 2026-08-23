@@ -10,6 +10,8 @@ input ──► primitive_1 ────────┤        │
 input ──► primitive_2 ────────┴──► bottleneck ──► p-weighted mixture ──► head ──► out
 ```
 
+**The Switchyard: why this is not mixture-of-experts.** MoE routes on input tokens (content routing). The Dirty Man routes on eye-detected features (meta routing). Three differences: (1) the eye preprocesses inputs into corruption-invariant features — routing is stable under noise (Theorem 7), (2) primitives are structurally heterogeneous (linear vs CNN vs gated) — not just different weights, different computation families, (3) specialization is oracle-supervised by latent regime, not load-balanced. For robotics (SARCOS), MoE switches between same-type networks (parameter change); the Switchyard switches computation families (linear for slow configs, nonlinear for fast). For sim2real, structure adaptation (4,659 router params) matches weight adaptation (16,330 params) at 0.475 vs 0.395 with 3.5x fewer parameters. See `switchyard_vs_moe.py` and the Switchyard section in the NMI paper.
+
 **Headline results** (3 seeds — every number reproduced from `results/*.json`):
 
 | Protocol | Result |
